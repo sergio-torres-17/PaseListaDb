@@ -53,6 +53,7 @@ MateriaId INT,
 HorarioId INT,
 AulaId BIGINT,
 DiaClaseId TINYINT,
+LimiteCupo INT NOT NULL,
 FechaInsercion DATETIME NOT NULL
 );
 CREATE TABLE MateriaHorarioProfesor(
@@ -204,7 +205,8 @@ CREATE PROCEDURE [dbo].[Sp_Registrar_Horario_Materia](
 @NombreMateria NVARCHAR(60),
 @NombreHorario NVARCHAR(150),
 @NombreAula NVARCHAR(20),
-@NombreDia NVARCHAR(20)
+@NombreDia NVARCHAR(20),
+@LimiteCupo INT
 )
 AS
 BEGIN
@@ -224,7 +226,7 @@ BEGIN
 	IF @MateriaId IS NOT NULL BEGIN
 		IF @HorarioId IS NOT NULL BEGIN
 			IF @ExisteClaseHoraAula = 0 BEGIN
-				INSERT INTO MateriaHorario(MateriaId, HorarioId, AulaId,DiaClaseId, FechaInsercion) VALUES(@MateriaId, @HorarioId,@AulaId, @DiaId, GETDATE());
+				INSERT INTO MateriaHorario(MateriaId, HorarioId, AulaId,DiaClaseId, LimiteCupo,FechaInsercion) VALUES(@MateriaId, @HorarioId,@AulaId, @DiaId, @LimiteCupo,GETDATE());
 				SELECT 0 [Rsp], 'La materia '+@NombreMateria +' se ha registrado en el horario '+@NombreHorario+' el día '+@NombreDia+' en el aula '+@NombreAula+' correctamente.' [Msg]
 			END
 			ELSE BEGIN

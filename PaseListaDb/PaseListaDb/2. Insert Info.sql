@@ -190,21 +190,21 @@ EXECUTE [dbo].[Sp_Insertar_Materia] 'Fundamentos de redes','Principiante'
 EXECUTE [dbo].[Sp_Insertar_Materia] 'Backend Web','Avanzado'
 EXECUTE [dbo].[Sp_Insertar_Materia] 'Desarrollo Móvil','Avanzado'
 --Registrar materias en horarios
-EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Estructuras de datos','8:15 A.M','A','Lunes'
-EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Fundamentos de programación','8:15 A.M','B','Lunes'
-EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Fundamentos de bases de datos','8:15 A.M','C','Lunes'
-EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Dev de bases de datos','9:15 A.M','A','Lunes'
-EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Administrador de Base de datos','9:15 A.M','B','Lunes'
-EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Fundamentos de redes','9:15 A.M','C','Lunes'
-EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Backend Web','8:15 A.M','A','Martes'
-EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Desarrollo Móvil','8:15 A.M','A','Miercoles'
-EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Fundamentos de programación','8:15 A.M','B','Jueves'
-EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Fundamentos de bases de datos','8:15 A.M','C','Miercoles'
-EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Dev de bases de datos','9:15 A.M','A','Martes'
-EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Administrador de Base de datos','9:15 A.M','B','Viernes'
-EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Fundamentos de redes','9:15 A.M','C','Martes'
-EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Backend Web','8:15 A.M','A','Martes'
-EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Desarrollo Móvil','8:15 A.M','A','Viernes'
+EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Estructuras de datos','8:15 A.M','A','Lunes', 30
+EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Fundamentos de programación','8:15 A.M','B','Lunes',30
+EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Fundamentos de bases de datos','8:15 A.M','C','Lunes',30
+EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Dev de bases de datos','9:15 A.M','A','Lunes',30
+EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Administrador de Base de datos','9:15 A.M','B','Lunes',30
+EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Fundamentos de redes','9:15 A.M','C','Lunes',30
+EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Backend Web','8:15 A.M','A','Martes',30
+EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Desarrollo Móvil','8:15 A.M','A','Miercoles',30
+EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Fundamentos de programación','8:15 A.M','B','Jueves',30
+EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Fundamentos de bases de datos','8:15 A.M','C','Miercoles',30
+EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Dev de bases de datos','9:15 A.M','A','Martes',30
+EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Administrador de Base de datos','9:15 A.M','B','Viernes',30
+EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Fundamentos de redes','9:15 A.M','C','Martes',30
+EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Backend Web','8:15 A.M','A','Martes',30
+EXECUTE [dbo].[Sp_Registrar_Horario_Materia] 'Desarrollo Móvil','8:15 A.M','A','Viernes',30
 ---
 
 EXECUTE [dbo].[Sp_Registrar_Maestro_en_materia] 'POO','8:15 A.M','Ana Cristina Argote Gasca'
