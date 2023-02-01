@@ -519,6 +519,26 @@ JOIN Aula a ON a.AulaId = mh.AulaId
 JOIN DiaClase dc ON dc.DiaClaseId = mh.DiaClaseId
 JOIN Profesor p ON p.ProfesorId =mhp.ProfesorId;
 GO
+	IF OBJECT_ID('Vw_Clases_Sin_Profesor_Asginado') IS NOT NULL BEGIN
+		DROP VIEW [dbo].[Vw_Clases_Sin_Profesor_Asginado];
+	END 
+GO
+CREATE VIEW [dbo].[Vw_Clases_Sin_Profesor_Asginado]
+AS
+select 
+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) [CodigoClase]
+,m.Nombre [NombreMateria]
+,h.Descripcion [NombreHorario]
+,a.Nombre [Aula]
+,dc.Nombre [DiaClase]
+from MateriaHorario mh
+JOIN Materia m ON m.MateriaId = mh.MateriaId
+JOIN Horario h ON h.HorarioId = mh.HorarioId
+JOIN Aula a ON a.AulaId = mh.AulaId
+JOIN DiaClase dc ON dc.DiaClaseId = mh.DiaClaseId
+LEFT JOIN MateriaHorarioProfesor mhp ON mhp.MateriaHorarioId = mh.MateriaHorarioId
+WHERE mhp.MateriaHorarioId IS NULL;
+GO
 /************************************************************************************/
 /************************************Disparadores************************************/
 /************************************************************************************/
