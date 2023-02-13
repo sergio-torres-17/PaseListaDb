@@ -615,11 +615,16 @@ BEGIN
 									AND mhpa.AlumnoId = @AlumnoId);
 	SET @MateriaHorarioProfesorAlumnoId = (SELECT 
 												mhpa.MateriaHorarioProfesorAlumnoId
-												FROM MateriaHorarioProfesorAlumno mhpa
-												JOIN MateriaHorarioProfesor mhp ON MHPA.MateriaHorarioProfesorId = mhp.MateriaHorarioProfesorId
-												JOIN MateriaHorario mh ON mh.MateriaHorarioId = mhp.MateriaHorarioId
-												WHERE CAST(mhp.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) = @CodigoClase
-												AND mhpa.AlumnoId = @AlumnoId
+												FROM MateriaHorarioProfesor mhp
+												JOIN MateriaHorario mh ON mhp.MateriaHorarioId =mh.MateriaHorarioId
+												JOIN Materia m ON m.MateriaId = mh.MateriaId
+												JOIN Horario h ON h.HorarioId = mh.HorarioId
+												JOIN Aula a ON a.AulaId = mh.AulaId
+												JOIN DiaClase dc ON dc.DiaClaseId = mh.DiaClaseId
+												JOIN Profesor p ON p.ProfesorId =mhp.ProfesorId
+												LEFT JOIN MateriaHorarioProfesorAlumno mhpa ON mhp.MateriaHorarioProfesorId = mhpa.MateriaHorarioProfesorId
+												WHERE CAST(p.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) =@CodigoClase
+												and mhpa.AlumnoId = @AlumnoId
 												);
 	
 
