@@ -378,13 +378,30 @@ BEGIN
 	DECLARE @ClaseIdMaster INT;
 	DECLARE @ExisteAsistencia BIT;
 	SET @AlumnoId = (SELECT AlumnoId FROM Alumno WHERE (Nombres+' '+Apellidos) = @NombreAlumno);
-	SET @ClaseIdMaster = (SELECT MateriaHorarioProfesorAlumnoId  FROM MateriaHorarioProfesorAlumno WHERE cast(MateriaHorarioProfesorAlumnoId as varchar)+'-'+CAST(MateriaHorarioProfesorId AS VARCHAR)+'-'+CAST(AlumnoId  AS VARCHAR) = @IdClase)
+	SET @ClaseIdMaster = (SELECT 
+								MateriaHorarioProfesorAlumnoId
+								FROM MateriaHorarioProfesor mhp
+								JOIN MateriaHorario mh ON mhp.MateriaHorarioId =mh.MateriaHorarioId
+								JOIN Materia m ON m.MateriaId = mh.MateriaId
+								JOIN Horario h ON h.HorarioId = mh.HorarioId
+								JOIN Aula a ON a.AulaId = mh.AulaId
+								JOIN DiaClase dc ON dc.DiaClaseId = mh.DiaClaseId
+								JOIN Profesor p ON p.ProfesorId =mhp.ProfesorId
+								LEFT JOIN MateriaHorarioProfesorAlumno mhpa ON mhp.MateriaHorarioProfesorId = mhpa.MateriaHorarioProfesorId
+								WHERE CAST(p.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar)= @IdClase
+								AND	mhpa.AlumnoId = @AlumnoId
+								);
 	SET @ExisteAsistencia = (SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END FROM Asistencia 
 									WHERE MateriaHorarioProfesorAlumnoId = @ClaseIdMaster AND AlumnoId = @AlumnoId AND CAST(FechaClase as date) = CAST(GETDATE() AS date) AND Asistio = 1);
 
 	IF @ExisteAsistencia = 0 BEGIN
-		UPDATE Asistencia SET Asistio = 1, FechaAsistencia = GETDATE() WHERE AlumnoId = @AlumnoId AND MateriaHorarioProfesorAlumnoId =  @ClaseIdMaster;
-		SELECT 0 [Rsp], 'Se registró la asistencia correctamente.' [Msg]
+		IF @ClaseIdMaster IS NOT NULL BEGIN
+			UPDATE Asistencia SET Asistio = 1, FechaAsistencia = GETDATE() WHERE AlumnoId = @AlumnoId AND MateriaHorarioProfesorAlumnoId =  @ClaseIdMaster;
+			SELECT 0 [Rsp], 'Se registró la asistencia correctamente.' [Msg]
+		END
+		ELSE BEGIN
+			SELECT -1 [Rsp], 'El alumno no está registrado en la clase o la clase no existe.' [Msg]
+		END
 	END
 	ELSE BEGIN
 		SELECT -1 [Rsp], 'Este alumno ya tiene asistencia.' [Msg]
@@ -569,6 +586,68 @@ JOIN Horario h ON mh.HorarioId = h.HorarioId
 JOIN Alumno al ON al.AlumnoId = mhpa.AlumnoId
 WHERE (al.Nombres +' '+AL.Apellidos) = @Nombre
 ;
+GO
+	IF OBJECT_ID('Sp_Insertar_Asistencia') IS NOT NULL BEGIN
+		DROP PROCEDURE [dbo].[Sp_Insertar_Asistencia];
+	END
+GO
+CREATE PROCEDURE [dbo].[Sp_Insertar_Asistencia](
+@CodigoClase NVARCHAR(30),
+@NombreAlumno NVARCHAR(150)
+)
+AS
+BEGIN
+	-- Variables
+	DECLARE @MateriaHorarioProfesorAlumnoId BIGINT;
+	DECLARE @AlumnoId BIGINT;
+	DECLARE @PertenceAlumnoClase BIT;
+
+	SET @AlumnoId = (SELECT AlumnoId FROM Alumno WHERE (Nombres+' '+Apellidos) = @NombreAlumno);
+	SET @PertenceAlumnoClase = (SELECT 
+									CASE 
+										WHEN COUNT(*) > 0 THEN 1 
+										ELSE 0
+									END
+									FROM MateriaHorarioProfesorAlumno mhpa
+									JOIN MateriaHorarioProfesor mhp ON MHPA.MateriaHorarioProfesorId = mhp.MateriaHorarioProfesorId
+									JOIN MateriaHorario mh ON mh.MateriaHorarioId = mhp.MateriaHorarioId
+									WHERE CAST(mhp.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) = @CodigoClase
+									AND mhpa.AlumnoId = @AlumnoId);
+	SET @MateriaHorarioProfesorAlumnoId = (SELECT 
+												mhpa.MateriaHorarioProfesorAlumnoId
+												FROM MateriaHorarioProfesorAlumno mhpa
+												JOIN MateriaHorarioProfesor mhp ON MHPA.MateriaHorarioProfesorId = mhp.MateriaHorarioProfesorId
+												JOIN MateriaHorario mh ON mh.MateriaHorarioId = mhp.MateriaHorarioId
+												WHERE CAST(mhp.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) = @CodigoClase
+												AND mhpa.AlumnoId = @AlumnoId
+												);
+	
+
+	IF @MateriaHorarioProfesorAlumnoId IS NOT NULL BEGIN
+		IF @AlumnoId IS NOT NULL BEGIN
+			IF @PertenceAlumnoClase = 1 BEGIN
+				UPDATE Asistencia 
+					SET 
+						Asistio = 1, 
+						FechaAsistencia = GETDATE() 
+					WHERE 
+						MateriaHorarioProfesorAlumnoId = @MateriaHorarioProfesorAlumnoId AND
+						AlumnoId = @AlumnoId AND
+						CAST(FechaClase AS DATE) = CAST(GETDATE() AS DATE );
+				SELECT 0 [Rsp], 'Se insertó la asistencia correctamente' [Msg]
+			END
+			ELSE BEGIN 
+				SELECT -1 [Rsp], 'El alumno no pertenece a esta clase' [Msg]
+			END
+		END
+		ELSE BEGIN
+			SELECT -1 [Rsp], 'El alumno '+@NombreAlumno+' no existe en el sistema' [Msg];
+		END
+	END
+	ELSE BEGIN
+		SELECT -1 [Rsp], 'La clase con el código '+@CodigoClase+' no existe en el sistema o el alumno no está registrado en la clase' [Msg];
+	END
+END;
 GO
 IF OBJECT_ID('Fn_Verificar_Horario_existente_Alumno') IS NOT NULL BEGIN
 	DROP FUNCTION [dbo].[Fn_Verificar_Horario_existente_Alumno];
