@@ -29,7 +29,7 @@ CREATE TABLE [Security].[CredencialAcceso](
 CredencialesAccesoId BIGINT PRIMARY KEY IDENTITY(1,1),
 UsuarioId BIGINT,
 Password VARBINARY(256) NOT NULL,
-FechaInsercion DATETIME NOT NULL
+FechaInsercion DATETIME NOT NULL DEFAULT GETDATE()
 );
 CREATE TABLE Grado(
 GradoId TINYINT PRIMARY KEY IDENTITY(1,1),
@@ -735,6 +735,22 @@ RETURN (SELECT CASE
 			ELSE @PrimerNombre + '@controlescolar.com'
 		END [Correo]
 		);
+END
+go
+CREATE TRIGGER [dbo].[Tr_Insertar_Credenciales_Profesor]
+ON [dbo].[Profesor]
+AFTER INSERT
+AS
+BEGIN
+	DECLARE @NOMBRE NVARCHAR(30);
+	DECLARE @APELLIDO NVARCHAR(30);
+	DECLARE @UsuarioId BIGINT;
+
+	SET @UsuarioId = (select UsuarioId from inserted);
+	SET @NOMBRE = (SELECT us.Nombres FROM Usuario us JOIN Profesor al ON al.UsuarioId = us.UsuarioId WHERE us.UsuarioId = @UsuarioId);
+	SET @APELLIDO = (SELECT us.Apellidos FROM Usuario us JOIN Profesor al ON al.UsuarioId = us.UsuarioId WHERE us.UsuarioId = @UsuarioId);
+	
+	INSERT INTO [Security].[CredencialAcceso](UsuarioId,Password) VALUES(@UsuarioId, HASHBYTES('SHA2_512', REPLACE(LOWER(TRIM(CONCAT(@NOMBRE, @APELLIDO))), ' ', '')));
 END
 GO
 /************************************************************************************/
