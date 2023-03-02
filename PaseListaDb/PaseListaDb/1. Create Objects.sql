@@ -2,19 +2,23 @@ CREATE DATABASE PaseListaDb;
 GO
 USE PaseListaDb;
 GO
-CREATE TABLE Alumno(
-AlumnoId INT PRIMARY KEY IDENTITY(1,1),
+CREATE TABLE Usuario(
+UsuarioId BIGINT PRIMARY KEY IDENTITY(1,1),
 Nombres NVARCHAR(30) NOT NULL,
 Apellidos NVARCHAR(30) NOT NULL,
 Edad TINYINT NOT NULL,
 Foto NVARCHAR(400),
+FechaInsercion DATETIME DEFAULT GETDATE()
+);
+GO
+CREATE TABLE Alumno(
+AlumnoId INT PRIMARY KEY IDENTITY(1,1),
+UsuarioId BIGINT NOT NULL,
 FechaInsercion DATETIME NOT NULL
 );
 CREATE TABLE Profesor(
 ProfesorId INT PRIMARY KEY IDENTITY(1,1),
-Nombres NVARCHAR(60) NOT NULL,
-Apellidos NVARCHAR(60) NOT NULL,
-Edad TINYINT NOT NULL,
+UsuarioId BIGINT,
 Especialidad NVARCHAR(100),
 FechaInsercion DATETIME NOT NULL
 );
@@ -116,11 +120,14 @@ CREATE PROCEDURE [dbo].[Sp_Insertar_Alumno](
 AS
 BEGIN
 	DECLARE @ExisteAlumno BIT;
-	SET @ExisteAlumno = (SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END FROM Alumno 
+	SET @ExisteAlumno = (SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END FROM Alumno al 
+							JOIN Usuario us ON us.UsuarioId = al.usuarioId
 							WHERE Nombres = @Nombres AND Apellidos = @Apellidos AND 
 							Edad = @Edad AND Foto = @Foto);
 	IF @ExisteAlumno = 0 BEGIN
-		INSERT INTO Alumno(Nombres, Apellidos,Edad,Foto, FechaInsercion) VALUES(@Nombres, @Apellidos,@Edad, @Foto, GETDATE());
+		INSERT INTO Usuario(Nombres, Apellidos,Edad,Foto) VALUES(@Nombres, @Apellidos,@Edad, @Foto);
+		DECLARE @UsuarioId BIGINT = (SELECT MAX(UsuarioId) FROM Usuario);
+		INSERT INTO Alumno(UsuarioId, FechaInsercion) VALUES(@UsuarioId, GETDATE());
 		SELECT 0 [Rsp], 'Se insertó el alumno correctamente' [Msg]
 	END
 	ELSE BEGIN
@@ -145,11 +152,14 @@ CREATE PROCEDURE [dbo].[Sp_Insertar_Profesor](
 AS
 BEGIN
 	DECLARE @ExisteAlumno BIT;
-	SET @ExisteAlumno = (SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END FROM Profesor 
+	SET @ExisteAlumno = (SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END FROM Profesor pr
+							JOIN Usuario us ON us.UsuarioId = pr.UsuarioId
 							WHERE Nombres = @Nombres AND Apellidos = @Apellidos AND 
 							Edad = @Edad AND Especialidad = @Especialidad);
 	IF @ExisteAlumno = 0 BEGIN
-		INSERT INTO Profesor(Nombres, Apellidos,Edad,Especialidad, FechaInsercion) VALUES(@Nombres, @Apellidos,@Edad, @Especialidad, GETDATE());
+		INSERT INTO Usuario(Nombres, Apellidos,Edad, Foto) VALUES(@Nombres, @Apellidos,@Edad, NULL);
+		DECLARE @UsuarioId BIGINT = (SELECT MAX(UsuarioId) FROM Usuario);
+		INSERT INTO Profesor(UsuarioId,Especialidad, FechaInsercion) VALUES(@UsuarioId,@Especialidad, GETDATE());
 		SELECT 0 [Rsp], 'Se insertó el profesor correctamente' [Msg]
 	END
 	ELSE BEGIN
@@ -279,7 +289,9 @@ BEGIN
 									JOIN Profesor p ON p.ProfesorId =mhp.ProfesorId
 									LEFT JOIN MateriaHorarioProfesorAlumno mhpa ON mhp.MateriaHorarioProfesorId = mhpa.MateriaHorarioProfesorId
 									WHERE CAST(p.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) = @CodigoClase)
-	SET @AlumnoId = (SELECT AlumnoId FROM Alumno WHERE (Nombres+' '+ Apellidos) = @NombreAlumno);
+	SET @AlumnoId = (SELECT AlumnoId FROM Alumno al 
+					JOIN Usuario us ON us.UsuarioId = al.UsuarioId
+					WHERE (Nombres+' '+ Apellidos) = @NombreAlumno);
 	SET @HorarioClase = (SELECT DISTINCT
 									h.Descripcion
 									FROM MateriaHorarioProfesor mhp
@@ -315,10 +327,11 @@ BEGIN
 											JOIN Aula a ON a.AulaId = mh.AulaId
 											JOIN DiaClase dc ON dc.DiaClaseId = mh.DiaClaseId
 											JOIN Profesor p ON p.ProfesorId =mhp.ProfesorId
+											JOIN Usuario us ON us.UsuarioId = p.UsuarioId
 											LEFT JOIN MateriaHorarioProfesorAlumno mhpa ON mhp.MateriaHorarioProfesorId = mhpa.MateriaHorarioProfesorId
 											WHERE CAST(p.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar)  = @CodigoClase
 											GROUP BY CAST(p.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) 
-											,(p.Nombres+' '+p.Apellidos) 
+											,(us.Nombres+' '+us.Apellidos) 
 											,m.Nombre 
 											,h.Descripcion 
 											,a.Nombre 
@@ -377,7 +390,9 @@ BEGIN
 	DECLARE @AlumnoId INT;
 	DECLARE @ClaseIdMaster INT;
 	DECLARE @ExisteAsistencia BIT;
-	SET @AlumnoId = (SELECT AlumnoId FROM Alumno WHERE (Nombres+' '+Apellidos) = @NombreAlumno);
+	SET @AlumnoId = (SELECT AlumnoId FROM Alumno al
+			JOIN Usuario us ON us.UsuarioId = al.UsuarioId
+			WHERE (Nombres+' '+Apellidos) = @NombreAlumno);
 	SET @ClaseIdMaster = (SELECT 
 								MateriaHorarioProfesorAlumnoId
 								FROM MateriaHorarioProfesor mhp
@@ -418,7 +433,9 @@ AS
 BEGIN
 	DECLARE @ProfesorId INT;
 	DECLARE @ClaseIdMaster INT;
-	SET @ProfesorId = (SELECT ProfesorId FROM Profesor WHERE (Nombres+' '+Apellidos) = @NombreProfesor);
+	SET @ProfesorId = (SELECT ProfesorId FROM Profesor pr 
+						JOIN Usuario US ON us.UsuarioId = pr.UsuarioId
+						WHERE (Nombres+' '+Apellidos) = @NombreProfesor);
 	SET @ClaseIdMaster = (SELECT MateriaHorarioProfesorAlumnoId  FROM MateriaHorarioProfesorAlumno WHERE cast(MateriaHorarioProfesorAlumnoId as varchar)+'-'+CAST(MateriaHorarioProfesorId AS VARCHAR)+'-'+CAST(AlumnoId  AS VARCHAR) = @IdClase)
 	
 	IF @ProfesorId IS NOT NULL BEGIN
@@ -468,7 +485,9 @@ BEGIN
 								JOIN DiaClase dc ON dc.DiaClaseId = mh.DiaClaseId
 								WHERE CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) = @CodigoClase
 								);
-	SET @ProfesorId = (SELECT ProfesorId FROM Profesor WHERE (Nombres+' '+Apellidos) = @NombreProfesor);
+	SET @ProfesorId = (SELECT ProfesorId FROM Profesor pr
+						JOIN Usuario us ON us.UsuarioId = pr.UsuarioId
+						WHERE (Nombres+' '+Apellidos) = @NombreProfesor);
 	SET @ExisteProfesorAsignado = (SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END FROM MateriaHorarioProfesor WHERE MateriaHorarioId = @MateriaHorarioId AND ProfesorId = @ProfesorId)
 	IF @ProfesorId IS NOT NULL BEGIN
 		IF @MateriaHorarioId IS NOT NULL BEGIN
@@ -521,7 +540,7 @@ AS
 
 SELECT 
 CAST(p.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) [CodigoClase]
-,(p.Nombres+' '+p.Apellidos) [Profesor]
+,(u.Nombres+' '+u.Apellidos) [Profesor]
 ,m.Nombre [NombreMateria]
 ,h.Descripcion [NombreHorario]
 ,a.Nombre [Aula]
@@ -534,9 +553,10 @@ JOIN Horario h ON h.HorarioId = mh.HorarioId
 JOIN Aula a ON a.AulaId = mh.AulaId
 JOIN DiaClase dc ON dc.DiaClaseId = mh.DiaClaseId
 JOIN Profesor p ON p.ProfesorId =mhp.ProfesorId
+JOIN Usuario u ON u.UsuarioId = p.UsuarioId
 LEFT JOIN MateriaHorarioProfesorAlumno mhpa ON mhp.MateriaHorarioProfesorId = mhpa.MateriaHorarioProfesorId
 GROUP BY CAST(p.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) 
-,(p.Nombres+' '+p.Apellidos) 
+,(u.Nombres+' '+u.Apellidos) 
 ,m.Nombre 
 ,h.Descripcion 
 ,a.Nombre 
@@ -574,7 +594,7 @@ SELECT CAST(p.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.Horar
 ,d.Nombre [Día]
 ,h.Descripcion [Horario]
 ,m.Nombre [Materia]
-,p.Nombres [Profesor]
+,us.Nombres [Profesor]
 FROM MateriaHorarioProfesorAlumno mhpa
 JOIN MateriaHorarioProfesor mhp ON mhp.MateriaHorarioProfesorId =  mhpa.MateriaHorarioProfesorId
 JOIN MateriaHorario mh ON mhp.MateriaHorarioId = mh.MateriaHorarioId
@@ -584,7 +604,8 @@ JOIN Aula a ON a.AulaId = mh.AulaId
 JOIN Profesor p ON p.ProfesorId = mhp.ProfesorId
 JOIN Horario h ON mh.HorarioId = h.HorarioId
 JOIN Alumno al ON al.AlumnoId = mhpa.AlumnoId
-WHERE (al.Nombres +' '+AL.Apellidos) = @Nombre
+JOIN Usuario us ON US.UsuarioId = AL.UsuarioId
+WHERE (us.Nombres +' '+us.Apellidos) = @Nombre
 ;
 GO
 	IF OBJECT_ID('Sp_Insertar_Asistencia') IS NOT NULL BEGIN
@@ -602,7 +623,9 @@ BEGIN
 	DECLARE @AlumnoId BIGINT;
 	DECLARE @PertenceAlumnoClase BIT;
 
-	SET @AlumnoId = (SELECT AlumnoId FROM Alumno WHERE (Nombres+' '+Apellidos) = @NombreAlumno);
+	SET @AlumnoId = (SELECT AlumnoId FROM Alumno al
+			JOIN Usuario us ON us.UsuarioId = al.UsuarioId
+			WHERE (us.Nombres+' '+us.Apellidos) = @NombreAlumno);
 	SET @PertenceAlumnoClase = (SELECT 
 									CASE 
 										WHEN COUNT(*) > 0 THEN 1 
@@ -677,8 +700,17 @@ JOIN Aula a ON a.AulaId = mh.AulaId
 JOIN Profesor p ON p.ProfesorId = mhp.ProfesorId
 JOIN Horario h ON mh.HorarioId = h.HorarioId
 JOIN Alumno al ON al.AlumnoId = mhpa.AlumnoId
-WHERE (al.Nombres +' '+AL.Apellidos) = @NombreAlumno AND h.Descripcion = @Horario AND d.Nombre = @DiaClase);
+JOIN Usuario us ON us.UsuarioId = al.UsuarioId
+WHERE (us.Nombres +' '+us.Apellidos) = @NombreAlumno AND h.Descripcion = @Horario AND d.Nombre = @DiaClase);
 end
+GO
+GO
+	CREATE FUNCTION [dbo].[Fn_Generar_Numero_control]()
+	RETURNS NVARCHAR(40)
+	AS
+	BEGIN
+	RETURN (SELECT RIGHT(LEFT(CAST(GETDATE() AS DATE), 4), 2)+RIGHT(CAST(GETDATE() AS DATE), 2)+cast(DATEPART(MINUTE, GETDATE()) as varchar)+cast(FORMAT( GETDATE(), 'ss') as varchar));
+	END;
 GO
 /************************************************************************************/
 /************************************Disparadores************************************/
