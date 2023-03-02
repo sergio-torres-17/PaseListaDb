@@ -2,6 +2,8 @@ CREATE DATABASE PaseListaDb;
 GO
 USE PaseListaDb;
 GO
+CREATE SCHEMA [Security];
+GO
 CREATE TABLE Usuario(
 UsuarioId BIGINT PRIMARY KEY IDENTITY(1,1),
 Nombres NVARCHAR(30) NOT NULL,
@@ -12,14 +14,21 @@ FechaInsercion DATETIME DEFAULT GETDATE()
 );
 GO
 CREATE TABLE Alumno(
-AlumnoId INT PRIMARY KEY IDENTITY(1,1),
+AlumnoId INT PRIMARY KEY ,
 UsuarioId BIGINT NOT NULL,
 FechaInsercion DATETIME NOT NULL
 );
 CREATE TABLE Profesor(
 ProfesorId INT PRIMARY KEY IDENTITY(1,1),
 UsuarioId BIGINT,
+Correo NVARCHAR(90) NOT NULL,
 Especialidad NVARCHAR(100),
+FechaInsercion DATETIME NOT NULL
+);
+CREATE TABLE [Security].[CredencialAcceso](
+CredencialesAccesoId BIGINT PRIMARY KEY IDENTITY(1,1),
+UsuarioId BIGINT,
+Password VARBINARY(256) NOT NULL,
 FechaInsercion DATETIME NOT NULL
 );
 CREATE TABLE Grado(
@@ -125,9 +134,11 @@ BEGIN
 							WHERE Nombres = @Nombres AND Apellidos = @Apellidos AND 
 							Edad = @Edad AND Foto = @Foto);
 	IF @ExisteAlumno = 0 BEGIN
+		WAITFOR DELAY '00:00:00.250';
 		INSERT INTO Usuario(Nombres, Apellidos,Edad,Foto) VALUES(@Nombres, @Apellidos,@Edad, @Foto);
 		DECLARE @UsuarioId BIGINT = (SELECT MAX(UsuarioId) FROM Usuario);
-		INSERT INTO Alumno(UsuarioId, FechaInsercion) VALUES(@UsuarioId, GETDATE());
+		DECLARE @AlumnoId INT = (SELECT dbo.Fn_Generar_Numero_control());
+		INSERT INTO Alumno(AlumnoId,UsuarioId, FechaInsercion) VALUES(@AlumnoId,@UsuarioId, GETDATE());
 		SELECT 0 [Rsp], 'Se insertó el alumno correctamente' [Msg]
 	END
 	ELSE BEGIN
@@ -152,6 +163,7 @@ CREATE PROCEDURE [dbo].[Sp_Insertar_Profesor](
 AS
 BEGIN
 	DECLARE @ExisteAlumno BIT;
+	DECLARE @EmailProfesor NVARCHAR(100)  = (SELECT [dbo].[Fn_Generar_Correo_Docente](@Nombres, @Apellidos))
 	SET @ExisteAlumno = (SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END FROM Profesor pr
 							JOIN Usuario us ON us.UsuarioId = pr.UsuarioId
 							WHERE Nombres = @Nombres AND Apellidos = @Apellidos AND 
@@ -159,7 +171,7 @@ BEGIN
 	IF @ExisteAlumno = 0 BEGIN
 		INSERT INTO Usuario(Nombres, Apellidos,Edad, Foto) VALUES(@Nombres, @Apellidos,@Edad, NULL);
 		DECLARE @UsuarioId BIGINT = (SELECT MAX(UsuarioId) FROM Usuario);
-		INSERT INTO Profesor(UsuarioId,Especialidad, FechaInsercion) VALUES(@UsuarioId,@Especialidad, GETDATE());
+		INSERT INTO Profesor(UsuarioId,Correo,Especialidad, FechaInsercion) VALUES(@UsuarioId,@EmailProfesor,@Especialidad, GETDATE());
 		SELECT 0 [Rsp], 'Se insertó el profesor correctamente' [Msg]
 	END
 	ELSE BEGIN
@@ -709,8 +721,21 @@ GO
 	RETURNS NVARCHAR(40)
 	AS
 	BEGIN
-	RETURN (SELECT RIGHT(LEFT(CAST(GETDATE() AS DATE), 4), 2)+RIGHT(CAST(GETDATE() AS DATE), 2)+cast(DATEPART(MINUTE, GETDATE()) as varchar)+cast(FORMAT( GETDATE(), 'ss') as varchar));
+	RETURN CAST((SELECT RIGHT(LEFT(CAST(GETDATE() AS DATE), 4), 2)+RIGHT(CAST(GETDATE() AS DATE), 2)+cast(DATEPART(SECOND, GETDATE()) as varchar)+CAST(LEFT(cast(RIGHT( CAST(GETDATE() as time), 7) as varchar), 2) AS varchar)) AS INT);
 	END;
+GO
+GO
+CREATE FUNCTION [dbo].[Fn_Generar_Correo_Docente](@Nombre NVARCHAR(100), @Apellidos NVARCHAR(100))
+RETURNS NVARCHAR(200)
+AS
+BEGIN
+	DECLARE @PrimerNombre as nvarchar(100) = (SELECT top 1 * FROM string_split(@Nombre, ' '))
+RETURN (SELECT CASE
+			WHEN @Apellidos <> '' THEN  @PrimerNombre+'.'+@Apellidos + '@controlescolar.com'
+			ELSE @PrimerNombre + '@controlescolar.com'
+		END [Correo]
+		);
+END
 GO
 /************************************************************************************/
 /************************************Disparadores************************************/
