@@ -4,6 +4,8 @@ USE PaseListaDb;
 GO
 CREATE SCHEMA [Security];
 GO
+CREATE SCHEMA [SettingServer];
+GO
 CREATE TABLE Usuario(
 UsuarioId BIGINT PRIMARY KEY IDENTITY(1,1),
 Nombres NVARCHAR(30) NOT NULL,
@@ -30,6 +32,13 @@ CredencialesAccesoId BIGINT PRIMARY KEY IDENTITY(1,1),
 UsuarioId BIGINT,
 Password VARBINARY(256) NOT NULL,
 FechaInsercion DATETIME NOT NULL DEFAULT GETDATE()
+);
+GO
+CREATE TABLE [SettingServer].[ParametroConfiguracion](
+[ParametroConfiguracionId] TINYINT PRIMARY KEY IDENTITY,
+[NombrePropiedad] NVARCHAR(500) NOT NULL,
+[ValorPropiedad] NVARCHAR(300) NOT NULL,
+FechaInsercion DATETIME DEFAULT GETDATE()
 );
 CREATE TABLE Grado(
 GradoId TINYINT PRIMARY KEY IDENTITY(1,1),
@@ -753,6 +762,32 @@ BEGIN
 	INSERT INTO [Security].[CredencialAcceso](UsuarioId,Password) VALUES(@UsuarioId, HASHBYTES('SHA2_512', REPLACE(LOWER(TRIM(CONCAT(@NOMBRE, @APELLIDO))), ' ', '')));
 END
 GO
+
+GO
+CREATE PROCEDURE [dbo].[Sp_Insert_Configuration_Property](
+@NombrePropiedad NVARCHAR(500),
+@ValorPropiedad NVARCHAR(10)
+)
+AS
+BEGIN
+	DECLARE @Existproperty BIT = (SELECT	
+										CASE 
+											WHEN COUNT(*)>0 THEN 1
+											ELSE 0
+										END
+								FROM [SettingServer].[ParametroConfiguracion]
+								WHERE [NombrePropiedad] = @NombrePropiedad
+								);
+	IF @Existproperty = 0 BEGIN
+		INSERT INTO [SettingServer].[ParametroConfiguracion]([NombrePropiedad],[ValorPropiedad]) VALUES(@NombrePropiedad, @ValorPropiedad);
+		SELECT 0 [Rsp],'Se insertó la configuracion correctamente' [Msg];
+	END
+	ELSE BEGIN
+		SELECT 0 [Rsp],'No se puede insertar la propiedad porque ya existe.' [Msg];
+	END
+END
+GO
+
 /************************************************************************************/
 /************************************Disparadores************************************/
 /************************************************************************************/
