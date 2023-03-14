@@ -28,7 +28,7 @@ FechaInsercion DATETIME NOT NULL
 CREATE TABLE [Security].[CredencialAcceso](
 CredencialesAccesoId BIGINT PRIMARY KEY IDENTITY(1,1),
 UsuarioId BIGINT,
-Password VARBINARY(256) NOT NULL,
+Password VARBINARY(MAX) NOT NULL,
 FechaInsercion DATETIME NOT NULL DEFAULT GETDATE()
 );
 CREATE TABLE Grado(
@@ -620,6 +620,64 @@ JOIN Usuario us ON US.UsuarioId = AL.UsuarioId
 WHERE (us.Nombres +' '+us.Apellidos) = @Nombre
 ;
 GO
+GO
+	IF OBJECT_ID('Login') IS NOT NULL BEGIN
+		DROP PROCEDURE [dbo].[Login];
+	END
+GO
+CREATE PROCEDURE [dbo].[Login](
+@Username NVARCHAR(100),
+@PasswordEncrypted NVARCHAR(100)
+)
+AS
+BEGIN
+	DECLARE @TipoUsuario INT;
+	DECLARE @NombreCompleto NVARCHAR(150)
+	SET @TipoUsuario = (SELECT [dbo].[Fn_Buscar_Tipo_Usuario](@Username));
+	
+	IF @TipoUsuario != 400 BEGIN
+		/***********************************************Login para profesores***********************************************/
+		IF @TipoUsuario = 1050 BEGIN
+			SET @NombreCompleto = (SELECT us.Nombres+' '+us.Apellidos  FROM Usuario us
+									JOIN Profesor pr ON us.UsuarioId = pr.UsuarioId
+									JOIN [Security].[CredencialAcceso] ca ON ca.UsuarioId = us.UsuarioId
+									WHERE pr.Correo = @Username AND ca.Password = HASHBYTES('SHA2_512',@PasswordEncrypted));
+			
+			IF @NombreCompleto IS NOT NULL BEGIN
+				SELECT '0' [Rsp], '+' [Token], @Username [Username], @TipoUsuario [UserType], @NombreCompleto [NombreCompleto];
+			END
+			ELSE BEGIN
+				SELECT '-1' [Rsp], NULL [Token], NULL [Username], NULL [UserType], NULL [NombreCompleto];
+				print 'paso profesores sin login'
+			END
+		END
+		/**************************************************Login alumnos**************************************************/
+		IF @TipoUsuario = 1150 BEGIN
+			SET @NombreCompleto = (SELECT us.Nombres+' '+us.Apellidos  FROM Usuario us
+									JOIN Alumno al ON al.UsuarioId = us.UsuarioId
+									JOIN [Security].[CredencialAcceso] ca ON ca.UsuarioId = us.UsuarioId
+									WHERE cast(al.AlumnoId as varchar) = @Username AND ca.Password = HASHBYTES('SHA2_512',CAST(@PasswordEncrypted AS VARCHAR(100))));
+			PRINT @PasswordEncrypted
+			PRINT CAST(@PasswordEncrypted AS VARCHAR(100))
+			PRINT 'NOMBRE COMPLETO'	
+			PRINT @NombreCompleto
+			
+			IF @NombreCompleto IS NOT NULL BEGIN
+				SELECT '0' [Rsp], '+' [Token], CAST(@Username AS varchar) [Username], CAST(@TipoUsuario AS VARCHAR) [UserType], @NombreCompleto [NombreCompleto];
+			END
+			ELSE BEGIN
+				SELECT '-1' [Rsp], NULL [Token], NULL [Username], NULL [UserType], NULL [NombreCompleto];
+				print 'paso estudiantes sin login'
+			END
+		END
+	END 
+	ELSE BEGIN
+		SELECT '-1' [Rsp], NULL [Token], NULL [Username], NULL [UserType], NULL [NompreCompleto];
+		print 'No paso'
+	END
+
+END;
+GO
 	IF OBJECT_ID('Sp_Insertar_Asistencia') IS NOT NULL BEGIN
 		DROP PROCEDURE [dbo].[Sp_Insertar_Asistencia];
 	END
@@ -737,6 +795,29 @@ RETURN (SELECT CASE
 		);
 END
 go
+GO
+	IF OBJECT_ID('Fn_Buscar_Tipo_Usuario') IS NOT NULL BEGIN
+		DROP FUNCTION [dbo].[Fn_Buscar_Tipo_Usuario];
+	END
+GO
+CREATE FUNCTION [dbo].[Fn_Buscar_Tipo_Usuario](
+@Username NVARCHAR(100)
+)
+RETURNS INT
+AS
+BEGIN
+		RETURN (select 
+			CASE
+				WHEN pr.ProfesorId IS NOT NULL AND al.AlumnoId IS NULL THEN 1050
+				WHEN pr.ProfesorId IS NULL AND al.AlumnoId IS NOT NULL THEN 1150
+				ELSE 400
+			END [TypeUser]
+		from Usuario us
+		LEFT JOIN Profesor pr ON us.UsuarioId = pr.UsuarioId
+		LEFT JOIN Alumno al ON al.UsuarioId = us.UsuarioId
+		WHERE pr.Correo = @Username OR CAST(al.UsuarioId as varchar) = @Username);
+END
+GO
 CREATE TRIGGER [dbo].[Tr_Insertar_Credenciales_Profesor]
 ON [dbo].[Profesor]
 AFTER INSERT
@@ -749,6 +830,23 @@ BEGIN
 	SET @UsuarioId = (select UsuarioId from inserted);
 	SET @NOMBRE = (SELECT us.Nombres FROM Usuario us JOIN Profesor al ON al.UsuarioId = us.UsuarioId WHERE us.UsuarioId = @UsuarioId);
 	SET @APELLIDO = (SELECT us.Apellidos FROM Usuario us JOIN Profesor al ON al.UsuarioId = us.UsuarioId WHERE us.UsuarioId = @UsuarioId);
+	
+	INSERT INTO [Security].[CredencialAcceso](UsuarioId,Password) VALUES(@UsuarioId, HASHBYTES('SHA2_512', REPLACE(LOWER(TRIM(CONCAT(@NOMBRE, @APELLIDO))), ' ', '')));
+END
+GO
+go
+CREATE TRIGGER [dbo].[Tr_Insertar_Credenciales_Alumno]
+ON [dbo].[Alumno]
+AFTER INSERT
+AS
+BEGIN
+	DECLARE @NOMBRE NVARCHAR(30);
+	DECLARE @APELLIDO NVARCHAR(30);
+	DECLARE @UsuarioId BIGINT;
+
+	SET @UsuarioId = (select UsuarioId from inserted);
+	SET @NOMBRE = (SELECT us.Nombres FROM Usuario us JOIN Alumno al ON al.UsuarioId = us.UsuarioId WHERE us.UsuarioId = @UsuarioId);
+	SET @APELLIDO = (SELECT us.Apellidos FROM Usuario us JOIN Alumno al ON al.UsuarioId = us.UsuarioId WHERE us.UsuarioId = @UsuarioId);
 	
 	INSERT INTO [Security].[CredencialAcceso](UsuarioId,Password) VALUES(@UsuarioId, HASHBYTES('SHA2_512', REPLACE(LOWER(TRIM(CONCAT(@NOMBRE, @APELLIDO))), ' ', '')));
 END
