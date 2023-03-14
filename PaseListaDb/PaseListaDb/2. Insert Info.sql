@@ -373,4 +373,4 @@ EXECUTE [dbo].[Sp_Registrar_Alumno_en_Clase] '791-13', 'Briana Princesa'
 EXECUTE [dbo].[Sp_Registrar_Alumno_en_Clase] '941-33', 'Neylan Dilara'
 
 
-
+exec Sp_Insert_Configuration_Property 'NombreDominio', '@leon.tecnm.mx';
