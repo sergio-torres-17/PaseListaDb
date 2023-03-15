@@ -672,7 +672,7 @@ BEGIN
 		END
 	END 
 	ELSE BEGIN
-		SELECT '-1' [Rsp], NULL [Token], NULL [Username], NULL [UserType], NULL [NompreCompleto];
+		SELECT '-1' [Rsp], NULL [Token], NULL [Username], NULL [UserType], NULL [NombreCompleto];
 		print 'No paso'
 	END
 
@@ -807,15 +807,15 @@ RETURNS INT
 AS
 BEGIN
 		RETURN (select 
-			CASE
+CASE
 				WHEN pr.ProfesorId IS NOT NULL AND al.AlumnoId IS NULL THEN 1050
 				WHEN pr.ProfesorId IS NULL AND al.AlumnoId IS NOT NULL THEN 1150
 				ELSE 400
-			END [TypeUser]
-		from Usuario us
-		LEFT JOIN Profesor pr ON us.UsuarioId = pr.UsuarioId
-		LEFT JOIN Alumno al ON al.UsuarioId = us.UsuarioId
-		WHERE pr.Correo = @Username OR CAST(al.UsuarioId as varchar) = @Username);
+end
+from Usuario us
+LEFT JOIN Alumno al ON us.UsuarioId = al.UsuarioId
+LEFT JOIN Profesor pr ON pr.UsuarioId = us.UsuarioId
+WHERE cast(al.AlumnoId as varchar) = @Username AND pr.);
 END
 GO
 CREATE TRIGGER [dbo].[Tr_Insertar_Credenciales_Profesor]
