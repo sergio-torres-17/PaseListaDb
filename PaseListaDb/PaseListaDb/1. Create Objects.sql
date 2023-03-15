@@ -641,10 +641,14 @@ BEGIN
 			SET @NombreCompleto = (SELECT us.Nombres+' '+us.Apellidos  FROM Usuario us
 									JOIN Profesor pr ON us.UsuarioId = pr.UsuarioId
 									JOIN [Security].[CredencialAcceso] ca ON ca.UsuarioId = us.UsuarioId
-									WHERE pr.Correo = @Username AND ca.Password = HASHBYTES('SHA2_512',@PasswordEncrypted));
-			
+									WHERE pr.Correo = @Username AND ca.Password = HASHBYTES('SHA2_512',CAST(@PasswordEncrypted AS VARCHAR(100))));
+			PRINT @PasswordEncrypted
+				PRINT CAST(@PasswordEncrypted AS VARCHAR(100))
+				PRINT 'NOMBRE COMPLETO'	
+				PRINT @NombreCompleto
 			IF @NombreCompleto IS NOT NULL BEGIN
 				SELECT '0' [Rsp], '+' [Token], @Username [Username], @TipoUsuario [UserType], @NombreCompleto [NombreCompleto];
+				
 			END
 			ELSE BEGIN
 				SELECT '-1' [Rsp], NULL [Token], NULL [Username], NULL [UserType], NULL [NombreCompleto];
@@ -809,7 +813,6 @@ BEGIN
 	DECLARE @ExistAlumno BIT;
 	DECLARE @DEV INT;
 	SET @ExistAlumno = (SELECT CASE WHEN COUNT(*)> 0 THEN 1 ELSE 0 END FROM Alumno WHERE CAST(AlumnoId AS VARCHAR) = @Username);
-	
 
 	IF @ExistAlumno = 1 BEGIN
 		SET @DEV = (select 
