@@ -806,17 +806,35 @@ CREATE FUNCTION [dbo].[Fn_Buscar_Tipo_Usuario](
 RETURNS INT
 AS
 BEGIN
-		RETURN (select 
-CASE
-				WHEN pr.ProfesorId IS NOT NULL AND al.AlumnoId IS NULL THEN 1050
-				WHEN pr.ProfesorId IS NULL AND al.AlumnoId IS NOT NULL THEN 1150
-				ELSE 400
-end
-from Usuario us
-LEFT JOIN Alumno al ON us.UsuarioId = al.UsuarioId
-LEFT JOIN Profesor pr ON pr.UsuarioId = us.UsuarioId
-WHERE cast(al.AlumnoId as varchar) = @Username AND pr.);
+	DECLARE @ExistAlumno BIT;
+	DECLARE @DEV INT;
+	SET @ExistAlumno = (SELECT CASE WHEN COUNT(*)> 0 THEN 1 ELSE 0 END FROM Alumno WHERE CAST(AlumnoId AS VARCHAR) = @Username);
+	
+
+	IF @ExistAlumno = 1 BEGIN
+		SET @DEV = (select 
+					CASE
+						WHEN al.AlumnoId IS NOT NULL THEN 1150
+						ELSE 400
+					end
+					from Usuario us
+					LEFT JOIN Alumno al ON us.UsuarioId = al.UsuarioId
+					WHERE cast(al.AlumnoId as varchar) = @Username);
+	END
+	ELSE BEGIN
+		SET @DEV = (select 
+					CASE
+						WHEN pr.ProfesorId IS NOT NULL THEN 1050
+						ELSE 400
+					end
+					from Usuario us
+					LEFT JOIN Profesor pr ON us.UsuarioId = pr.UsuarioId
+					WHERE CAST(pr.Correo AS VARCHAR) = CAST(@Username AS VARCHAR));
+	END
+	RETURN @DEV;
+		
 END
+GO
 GO
 CREATE TRIGGER [dbo].[Tr_Insertar_Credenciales_Profesor]
 ON [dbo].[Profesor]
