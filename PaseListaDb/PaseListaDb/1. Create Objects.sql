@@ -505,18 +505,18 @@ BEGIN
 		IF @MateriaHorarioId IS NOT NULL BEGIN
 			IF @ExisteProfesorAsignado = 0 BEGIN
 				INSERT INTO MateriaHorarioProfesor(MateriaHorarioId, ProfesorId,FechaInsercion) VALUES(@MateriaHorarioId, @ProfesorId, GETDATE());
-				SELECT 0 [Rsp], 'El profesor ' +@NombreProfesor+' fue asignada a la clase con el código '+@CodigoClase+' no existe.' [Rsp];
+				SELECT 0 [Rsp], 'El profesor ' +@NombreProfesor+' fue asignada a la clase con el código '+@CodigoClase+' no existe.' [Msg];
 			END 
 			ELSE BEGIN
-				SELECT 1 [Rsp], 'La clase con ya tiene profesor asignado.' [Rsp]
+				SELECT 1 [Rsp], 'La clase con ya tiene profesor asignado.' [Msg]
 			END
 		END
 		ELSE BEGIN
-			SELECT 1 [Rsp], 'La clase con el código: '+@CodigoClase+' no existe.' [Rsp]
+			SELECT 1 [Rsp], 'La clase con el código: '+@CodigoClase+' no existe.' [Msg]
 		END
 	END
 	ELSE BEGIN
-		SELECT 1 [Rsp], 'El profesor '+@NombreProfesor+' no existe.' [Rsp]
+		SELECT 1 [Rsp], 'El profesor '+@NombreProfesor+' no existe.' [Msg]
 	END
 END
 GO
@@ -603,7 +603,7 @@ GO
 CREATE PROCEDURE Sp_View_Mis_Materias(@Nombre NVARCHAR(60))
 AS
 SELECT CAST(p.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) [CodigoClase]
-,d.Nombre [Día]
+,d.Nombre [Dia]
 ,h.Descripcion [Horario]
 ,m.Nombre [Materia]
 ,us.Nombres [Profesor]

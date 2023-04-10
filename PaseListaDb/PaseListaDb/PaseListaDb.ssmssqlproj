@@ -15,6 +15,18 @@
           <ConnectionProtocol>NotSpecified</ConnectionProtocol>
           <ApplicationName>Microsoft SQL Server Management Studio - Query</ApplicationName>
         </ConnectionNode>
+        <ConnectionNode Name="sql8005.site4now.net:db_a9752f_paselistadb_admin">
+          <Created>2023-04-08T01:31:10.832786-06:00</Created>
+          <Type>SQL</Type>
+          <Server>sql8005.site4now.net</Server>
+          <UserName>db_a9752f_paselistadb_admin</UserName>
+          <Authentication>SQL</Authentication>
+          <InitialDB />
+          <LoginTimeout>30</LoginTimeout>
+          <ExecutionTimeout>0</ExecutionTimeout>
+          <ConnectionProtocol>NotSpecified</ConnectionProtocol>
+          <ApplicationName>Microsoft SQL Server Management Studio - Query</ApplicationName>
+        </ConnectionNode>
       </Items>
     </LogicalFolder>
     <LogicalFolder Name="Queries" Type="0" Sorted="true">
@@ -26,9 +38,9 @@
           <FullPath>1. Create Objects.sql</FullPath>
         </FileNode>
         <FileNode Name="2. Insert Info.sql">
-          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:(local)\DEVTEC:False:sa</AssociatedConnectionMoniker>
-          <AssociatedConnSrvName>(local)\DEVTEC</AssociatedConnSrvName>
-          <AssociatedConnUserName>sa</AssociatedConnUserName>
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:sql8005.site4now.net:False:db_a9752f_paselistadb_admin</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>sql8005.site4now.net</AssociatedConnSrvName>
+          <AssociatedConnUserName>db_a9752f_paselistadb_admin</AssociatedConnUserName>
           <FullPath>2. Insert Info.sql</FullPath>
         </FileNode>
       </Items>
