@@ -232,7 +232,7 @@ CREATE PROCEDURE [dbo].[Sp_Registrar_Horario_Materia](
 )
 AS
 BEGIN
-	DECLARE @MateriaId TINYINT;
+	DECLARE @MateriaId INT;
 	DECLARE @HorarioId INT;
 	DECLARE @AulaId BIGINT;
 	DECLARE @DiaId TINYINT;
@@ -750,6 +750,54 @@ BEGIN
 		SELECT -1 [Rsp], 'La clase con el código '+@CodigoClase+' no existe en el sistema o el alumno no está registrado en la clase' [Msg];
 	END
 END;
+GO
+IF OBJECT_ID('Sp_Vista_Num_Asistencia_Codigo_Clase') IS NOT NULL BEGIN
+	DROP PROCEDURE [dbo].[Sp_Vista_Num_Asistencia_Codigo_Clase];
+END
+GO
+CREATE PROCEDURE [dbo].[Sp_Vista_Num_Asistencia_Codigo_Clase](@CodigoClase NVARCHAR(52))
+AS
+BEGIN
+
+select COUNT(a.AsistenciaId) [Num]  from Asistencia a
+join  MateriaHorarioProfesorAlumno mhpa ON a.MateriaHorarioProfesorAlumnoId = mhpa.MateriaHorarioProfesorAlumnoId
+JOIN MateriaHorarioProfesor mhp ON mhp.MateriaHorarioProfesorId = mhpa.MateriaHorarioProfesorId
+JOIN MateriaHorario mh ON mh.MateriaHorarioId = mhp.MateriaHorarioId
+JOIN Materia m ON m.MateriaId = mh.MateriaId
+JOIN Horario h ON h.HorarioId = mh.HorarioId
+JOIN Alumno al ON al.AlumnoId = mhpa.AlumnoId
+JOIN Usuario us ON us.UsuarioId = al.UsuarioId
+JOIN Profesor p ON p.ProfesorId = mhp.ProfesorId
+WHERE CAST(a.FechaClase as date) = cast(GETDATE() as date) AND
+CAST(p.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) = @CodigoClase AND
+Asistio = 1
+;
+END
+go
+IF OBJECT_ID('Sp_Vista_Alumnos_Asistencia_Codigo_Clase') IS NOT NULL BEGIN
+	DROP PROCEDURE [dbo].[Sp_Vista_Alumnos_Asistencia_Codigo_Clase];
+END
+GO
+CREATE PROCEDURE [dbo].[Sp_Vista_Alumnos_Asistencia_Codigo_Clase](@CodigoClase NVARCHAR(52))
+AS
+BEGIN
+
+select al.AlumnoId [NumeroCOntrol],us.Nombres +' '+us.Apellidos [NombreAlumno], CAST(a.FechaAsistencia as time) [HoraLlegada]  from Asistencia a
+join  MateriaHorarioProfesorAlumno mhpa ON a.MateriaHorarioProfesorAlumnoId = mhpa.MateriaHorarioProfesorAlumnoId
+JOIN MateriaHorarioProfesor mhp ON mhp.MateriaHorarioProfesorId = mhpa.MateriaHorarioProfesorId
+JOIN MateriaHorario mh ON mh.MateriaHorarioId = mhp.MateriaHorarioId
+JOIN Materia m ON m.MateriaId = mh.MateriaId
+JOIN Horario h ON h.HorarioId = mh.HorarioId
+JOIN Alumno al ON al.AlumnoId = mhpa.AlumnoId
+JOIN Usuario us ON us.UsuarioId = al.UsuarioId
+JOIN Profesor p ON p.ProfesorId = mhp.ProfesorId
+WHERE CAST(a.FechaClase as date) = cast(GETDATE() as date) AND
+CAST(p.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) = @CodigoClase AND
+Asistio = 1
+;
+END
+go
+
 GO
 IF OBJECT_ID('Fn_Verificar_Horario_existente_Alumno') IS NOT NULL BEGIN
 	DROP FUNCTION [dbo].[Fn_Verificar_Horario_existente_Alumno];
