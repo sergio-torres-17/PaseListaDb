@@ -759,15 +759,15 @@ CREATE PROCEDURE [dbo].[Sp_Vista_Num_Asistencia_Codigo_Clase](@CodigoClase NVARC
 AS
 BEGIN
 
-select COUNT(a.AsistenciaId) [Num]  from Asistencia a
+select COUNT( distinct a.AsistenciaId) [Num]  from Asistencia a
 join  MateriaHorarioProfesorAlumno mhpa ON a.MateriaHorarioProfesorAlumnoId = mhpa.MateriaHorarioProfesorAlumnoId
 JOIN MateriaHorarioProfesor mhp ON mhp.MateriaHorarioProfesorId = mhpa.MateriaHorarioProfesorId
 JOIN MateriaHorario mh ON mh.MateriaHorarioId = mhp.MateriaHorarioId
 JOIN Materia m ON m.MateriaId = mh.MateriaId
 JOIN Horario h ON h.HorarioId = mh.HorarioId
 JOIN Alumno al ON al.AlumnoId = mhpa.AlumnoId
-JOIN Usuario us ON us.UsuarioId = al.UsuarioId
-JOIN Profesor p ON p.ProfesorId = mhp.ProfesorId
+LEFT JOIN Usuario us ON us.UsuarioId = al.UsuarioId
+LEFT JOIN Profesor p ON p.ProfesorId = mhp.ProfesorId
 WHERE CAST(a.FechaClase as date) = cast(GETDATE() as date) AND
 CAST(p.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) = @CodigoClase AND
 Asistio = 1
@@ -782,22 +782,53 @@ CREATE PROCEDURE [dbo].[Sp_Vista_Alumnos_Asistencia_Codigo_Clase](@CodigoClase N
 AS
 BEGIN
 
-select al.AlumnoId [NumeroCOntrol],us.Nombres +' '+us.Apellidos [NombreAlumno], CAST(a.FechaAsistencia as time) [HoraLlegada]  from Asistencia a
+select distinct CAST( al.AlumnoId AS VARCHAR) [NumeroControl],us.Nombres +' '+us.Apellidos [NombreAlumno], CAST(a.FechaAsistencia as datetime) [HoraLlegada]  from Asistencia a
 join  MateriaHorarioProfesorAlumno mhpa ON a.MateriaHorarioProfesorAlumnoId = mhpa.MateriaHorarioProfesorAlumnoId
 JOIN MateriaHorarioProfesor mhp ON mhp.MateriaHorarioProfesorId = mhpa.MateriaHorarioProfesorId
 JOIN MateriaHorario mh ON mh.MateriaHorarioId = mhp.MateriaHorarioId
 JOIN Materia m ON m.MateriaId = mh.MateriaId
 JOIN Horario h ON h.HorarioId = mh.HorarioId
 JOIN Alumno al ON al.AlumnoId = mhpa.AlumnoId
-JOIN Usuario us ON us.UsuarioId = al.UsuarioId
-JOIN Profesor p ON p.ProfesorId = mhp.ProfesorId
+LEFT JOIN Usuario us ON us.UsuarioId = al.UsuarioId
+LEFT JOIN Profesor p ON p.ProfesorId = mhp.ProfesorId
 WHERE CAST(a.FechaClase as date) = cast(GETDATE() as date) AND
 CAST(p.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) = @CodigoClase AND
 Asistio = 1
 ;
 END
 go
-
+GO
+IF OBJECT_ID('Sp_Crear_Lista_Diaria') IS NOT NULL BEGIN
+	DROP PROCEDURE [dbo].[Sp_Crear_Lista_Diaria];
+END
+GO
+CREATE PROCEDURE [dbo].[Sp_Crear_Lista_Diaria]
+AS 
+BEGIN
+DECLARE @Conteo INT;
+	CREATE TABLE #TmpAlumnoIdAsistencia(
+	MateriaHorarioProfesorAlumnoId BIGINT
+	);
+	INSERT INTO  #TmpAlumnoIdAsistencia
+	SELECT MateriaHorarioProfesorAlumnoId FROM MateriaHorarioProfesorAlumno
+	WHERE 
+		MateriaHorarioProfesorAlumnoId NOT IN(
+		
+		select MateriaHorarioProfesorAlumnoId from Asistencia where CAST(FechaClase as date ) = CAST(GETDATE() as date)
+		)
+	set @Conteo = (select COUNT(*) FROM #TmpAlumnoIdAsistencia);
+	IF @Conteo > 0 BEGIN
+		INSERT Asistencia(MateriaHorarioProfesorAlumnoId, AlumnoId, Asistio, FechaClase, FechaAsistencia)
+			select MateriaHorarioProfesorAlumnoId, AlumnoId,0, GETDATE(), NULL  from MateriaHorarioProfesorAlumno 
+				WHERE 
+					MateriaHorarioProfesorAlumnoId IN (
+						SELECT MateriaHorarioProfesorAlumnoId FROM #TmpAlumnoIdAsistencia
+					);
+		--PRINT 'Conteo nueva consulta '+CAST(@Conteo AS VARCHAR)
+		--PRINT 'Conteo consulta antigua '+CAST(@ConteoAntiguo AS VARCHAR);
+	END
+	DROP TABLE #TmpAlumnoIdAsistencia;
+END
 GO
 IF OBJECT_ID('Fn_Verificar_Horario_existente_Alumno') IS NOT NULL BEGIN
 	DROP FUNCTION [dbo].[Fn_Verificar_Horario_existente_Alumno];
