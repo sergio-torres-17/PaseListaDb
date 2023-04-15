@@ -89,6 +89,14 @@ Asistio BIT,
 FechaClase DATETIME NOT NULL,
 FechaAsistencia DATETIME
 );
+CREATE TABLE [dbo].[AsistenciaProfesor](
+AsistenciaProfesorId BIGINT PRIMARY KEY IDENTITY(1,1),
+MateriaHorarioProfesorId INT,
+ProfesorId INT,
+Asistio BIT DEFAULT 0,
+FechaClase DATETIME DEFAULT GETDATE(),
+FechaAsistencia DATETIME DEFAULT GETDATE()
+);
 /****************************************************************/
 /*************************Llaves Foráneas*************************/
 /****************************************************************/
@@ -111,6 +119,17 @@ FOREIGN KEY (HorarioId) REFERENCES Horario(HorarioId);
 ALTER TABLE Asistencia
 ADD CONSTRAINT FK_MateriaHorarioProfesorAlumnoId_MateriaHorarioProfesorAlumno
 FOREIGN KEY (MateriaHorarioProfesorAlumnoId) REFERENCES MateriaHorarioProfesorAlumno(MateriaHorarioProfesorAlumnoId);
+GO
+-- Add foreign key MateriaHorarioProfesorAlumnoId
+ALTER TABLE [dbo].[AsistenciaProfesor]
+ADD CONSTRAINT Fk_AsistenciaProfesor_MateriaHorarioProfesorId
+FOREIGN KEY (MateriaHorarioProfesorId) REFERENCES MateriaHorarioProfesor(MateriaHorarioProfesorId);
+GO
+--Add foreign key ProfesorId
+ALTER TABLE [dbo].[AsistenciaProfesor]
+ADD CONSTRAINT Fk_AsistenciaProfesor_ProfesorId
+FOREIGN KEY (ProfesorId) REFERENCES Profesor(ProfesorId);
+GO
 /**************************************************************************/
 /******************************Procedimientos******************************/
 /**************************************************************************/
@@ -626,8 +645,8 @@ GO
 	END
 GO
 CREATE PROCEDURE [dbo].[Login](
-@Username NVARCHAR(100),
-@PasswordEncrypted NVARCHAR(100)
+@Username NVARCHAR(500),
+@PasswordEncrypted NVARCHAR(500)
 )
 AS
 BEGIN
@@ -647,11 +666,11 @@ BEGIN
 				PRINT 'NOMBRE COMPLETO'	
 				PRINT @NombreCompleto
 			IF @NombreCompleto IS NOT NULL BEGIN
-				SELECT '0' [Rsp], '+' [Token], @Username [Username], @TipoUsuario [UserType], @NombreCompleto [NombreCompleto];
+				SELECT 0 [Rsp], '+' [Token], @Username [Username], @TipoUsuario [UserType], @NombreCompleto [NombreCompleto];
 				
 			END
 			ELSE BEGIN
-				SELECT '-1' [Rsp], NULL [Token], NULL [Username], NULL [UserType], NULL [NombreCompleto];
+				SELECT -1 [Rsp], NULL [Token], NULL [Username], NULL [UserType], NULL [NombreCompleto];
 				print 'paso profesores sin login'
 			END
 		END
@@ -667,16 +686,16 @@ BEGIN
 			PRINT @NombreCompleto
 			
 			IF @NombreCompleto IS NOT NULL BEGIN
-				SELECT '0' [Rsp], '+' [Token], CAST(@Username AS varchar) [Username], CAST(@TipoUsuario AS VARCHAR) [UserType], @NombreCompleto [NombreCompleto];
+				SELECT 0 [Rsp], '+' [Token], CAST(@Username AS varchar) [Username], @TipoUsuario [UserType], @NombreCompleto [NombreCompleto];
 			END
 			ELSE BEGIN
-				SELECT '-1' [Rsp], NULL [Token], NULL [Username], NULL [UserType], NULL [NombreCompleto];
+				SELECT -1 [Rsp], NULL [Token], NULL [Username], NULL [UserType], NULL [NombreCompleto];
 				print 'paso estudiantes sin login'
 			END
 		END
 	END 
 	ELSE BEGIN
-		SELECT '-1' [Rsp], NULL [Token], NULL [Username], NULL [UserType], NULL [NombreCompleto];
+		SELECT -1 [Rsp], NULL [Token], NULL [Username], NULL [UserType], NULL [NombreCompleto];
 		print 'No paso'
 	END
 
@@ -829,6 +848,74 @@ DECLARE @Conteo INT;
 	END
 	DROP TABLE #TmpAlumnoIdAsistencia;
 END
+GO
+IF OBJECT_ID('Sp_Insertar_Asistencia_Profesor') IS NOT NULL BEGIN
+	DROP PROCEDURE [dbo].[Sp_Insertar_Asistencia_Profesor];
+END
+GO
+CREATE PROCEDURE [dbo].[Sp_Insertar_Asistencia_Profesor](@CodigoClase NVARCHAR(15), @NombreProfesor NVARCHAR(50))
+AS
+BEGIN
+	DECLARE @MateriaHorarioProfesorId BIGINT;
+	DECLARE @ProfesorId BIGINT;
+	DECLARE @PertenceProfesorClase BIT;
+	--Buscar Profesor
+	SET @ProfesorId = (SELECT pr.ProfesorId FROM Profesor pr
+			JOIN Usuario us ON us.UsuarioId = pr.UsuarioId
+			WHERE (us.Nombres+' '+us.Apellidos) = @NombreProfesor)
+			PRINT 'Profesor '
+			PRINT CAST(@ProfesorId AS VARCHAR)
+	SET @PertenceProfesorClase = (SELECT 
+									CASE 
+										WHEN COUNT(*) > 0 THEN 1 
+										ELSE 0
+									END
+									FROM  MateriaHorarioProfesor mhp
+									JOIN MateriaHorario mh ON mh.MateriaHorarioId = mhp.MateriaHorarioId
+									WHERE CAST(mhp.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) = @CodigoClase
+									AND mhp.ProfesorId = @ProfesorId);
+	PRINT 'Pertenece '+CAST(@PertenceProfesorClase AS VARCHAR)
+	SET @MateriaHorarioProfesorId = (SELECT 
+												mhp.MateriaHorarioProfesorId
+												FROM MateriaHorarioProfesor mhp
+												JOIN MateriaHorario mh ON mhp.MateriaHorarioId =mh.MateriaHorarioId
+												JOIN Materia m ON m.MateriaId = mh.MateriaId
+												JOIN Horario h ON h.HorarioId = mh.HorarioId
+												JOIN Aula a ON a.AulaId = mh.AulaId
+												JOIN DiaClase dc ON dc.DiaClaseId = mh.DiaClaseId
+												JOIN Profesor p ON p.ProfesorId =mhp.ProfesorId
+												WHERE CAST(p.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) =@CodigoClase
+												and mhp.ProfesorId = @ProfesorId
+												);
+	IF @MateriaHorarioProfesorId IS NOT NULL BEGIN
+		IF @ProfesorId IS NOT NULL BEGIN
+			IF @PertenceProfesorClase = 1 BEGIN
+				UPDATE AsistenciaProfesor 
+					SET 
+						Asistio = 1, 
+						FechaAsistencia = GETDATE() 
+					WHERE 
+						MateriaHorarioProfesorId = @MateriaHorarioProfesorId AND
+						ProfesorId = @ProfesorId AND
+						CAST(FechaClase AS DATE) = CAST(GETDATE() AS DATE );
+				SELECT 0 [Rsp], 'Se insertó la asistencia del profesor correctamente' [Msg]
+			END
+			ELSE BEGIN 
+				SELECT -1 [Rsp], 'El profesor no pertenece a esta clase' [Msg]
+			END
+		END
+		ELSE BEGIN
+			SELECT -1 [Rsp], 'El profesor '+@NombreProfesor+' no existe en el sistema' [Msg];
+		END
+	END
+	ELSE BEGIN
+		SELECT -1 [Rsp], 'La clase con el código '+@CodigoClase+' no existe en el sistema o el profesor no está registrado en la clase' [Msg];
+	END
+
+END
+GO
+	PRINT 'El procedimiento [dbo].[Sp_Insertar_Asistencia_Profesor] ha sido creado correctamente.'
+GO
 GO
 IF OBJECT_ID('Fn_Verificar_Horario_existente_Alumno') IS NOT NULL BEGIN
 	DROP FUNCTION [dbo].[Fn_Verificar_Horario_existente_Alumno];
