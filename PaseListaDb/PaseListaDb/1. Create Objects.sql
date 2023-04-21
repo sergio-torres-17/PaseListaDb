@@ -79,7 +79,9 @@ CREATE TABLE MateriaHorarioProfesorAlumno(
 MateriaHorarioProfesorAlumnoId INT PRIMARY KEY IDENTITY(1,1),
 MateriaHorarioProfesorId INT,
 AlumnoId INT,
-FechaInsercion DATETIME NOT NULL
+FechaInsercion DATETIME NOT NULL,
+FechaBaja DATETIME DEFAULT GETDATE(),
+RazonBajaId TINYINT DEFAULT NULL
 );
 CREATE TABLE Asistencia(
 AsistenciaId INT PRIMARY KEY IDENTITY(1,1),
@@ -89,6 +91,12 @@ Asistio BIT,
 FechaClase DATETIME NOT NULL,
 FechaAsistencia DATETIME
 );
+CREATE TABLE [dbo].[RazonBaja](
+RazonBajaId TINYINT PRIMARY KEY,
+DescripcionRazon NVARCHAR(25) NOT NULL,
+FechaInsercion DATETIME DEFAULT GETDATE()
+);
+
 CREATE TABLE [dbo].[AsistenciaProfesor](
 AsistenciaProfesorId BIGINT PRIMARY KEY IDENTITY(1,1),
 MateriaHorarioProfesorId INT,
@@ -129,6 +137,10 @@ GO
 ALTER TABLE [dbo].[AsistenciaProfesor]
 ADD CONSTRAINT Fk_AsistenciaProfesor_ProfesorId
 FOREIGN KEY (ProfesorId) REFERENCES Profesor(ProfesorId);
+GO
+ALTER TABLE [dbo].[MateriaHorarioProfesorAlumno] 
+ADD CONSTRAINT Fk_RazonBaja_RazonBajaId
+FOREIGN KEY (RazonBajaId) REFERENCES RazonBaja(RazonBajaId);
 GO
 /**************************************************************************/
 /******************************Procedimientos******************************/
@@ -371,7 +383,7 @@ BEGIN
 									);
 			
 			IF @Cupo> 0 AND (@Cupo - 1) >= 0 BEGIN
-				SET @ExisteAlumnoEnClase = (SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END FROM MateriaHorarioProfesorAlumno WHERE AlumnoId = @AlumnoId);
+				SET @ExisteAlumnoEnClase = (SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END FROM MateriaHorarioProfesorAlumno WHERE AlumnoId = @AlumnoId AND MateriaHorarioProfesorId = @MateriaHorarioProfesor);
 				IF @ExisteAlumnoEnClase = 0 BEGIN
 					SET @TieneHorarioExistente = (select [dbo].[Fn_Verificar_Horario_existente_Alumno](@NombreAlumno, @HorarioClase, @HorarioClase));
 					IF @TieneHorarioExistente = 0 BEGIN
