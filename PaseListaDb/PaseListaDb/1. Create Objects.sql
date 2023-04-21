@@ -92,7 +92,7 @@ FechaClase DATETIME NOT NULL,
 FechaAsistencia DATETIME
 );
 CREATE TABLE [dbo].[RazonBaja](
-RazonBajaId TINYINT PRIMARY KEY,
+RazonBajaId TINYINT PRIMARY KEY IDENTITY(1,1),
 DescripcionRazon NVARCHAR(25) NOT NULL,
 FechaInsercion DATETIME DEFAULT GETDATE()
 );
@@ -648,7 +648,7 @@ JOIN Profesor p ON p.ProfesorId = mhp.ProfesorId
 JOIN Horario h ON mh.HorarioId = h.HorarioId
 JOIN Alumno al ON al.AlumnoId = mhpa.AlumnoId
 JOIN Usuario us ON US.UsuarioId = AL.UsuarioId
-WHERE (us.Nombres +' '+us.Apellidos) = @Nombre
+WHERE (us.Nombres +' '+us.Apellidos) = @Nombre AND mhpa.FechaBaja IS NULL
 ;
 GO
 GO
@@ -718,7 +718,7 @@ GO
 	END
 GO
 CREATE PROCEDURE [dbo].[Sp_Insertar_Asistencia](
-@CodigoClase NVARCHAR(30),
+@CodigoClase NVARCHAR(150),
 @NombreAlumno NVARCHAR(150)
 )
 AS
@@ -740,7 +740,7 @@ BEGIN
 									JOIN MateriaHorarioProfesor mhp ON MHPA.MateriaHorarioProfesorId = mhp.MateriaHorarioProfesorId
 									JOIN MateriaHorario mh ON mh.MateriaHorarioId = mhp.MateriaHorarioId
 									WHERE CAST(mhp.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) = @CodigoClase
-									AND mhpa.AlumnoId = @AlumnoId);
+									AND mhpa.AlumnoId = @AlumnoId AND mhpa.FechaBaja IS NULL);
 	SET @MateriaHorarioProfesorAlumnoId = (SELECT 
 												mhpa.MateriaHorarioProfesorAlumnoId
 												FROM MateriaHorarioProfesor mhp
@@ -846,7 +846,7 @@ DECLARE @Conteo INT;
 		MateriaHorarioProfesorAlumnoId NOT IN(
 		
 		select MateriaHorarioProfesorAlumnoId from Asistencia where CAST(FechaClase as date ) = CAST(GETDATE() as date)
-		)
+		) and FechaBaja IS NULL
 	set @Conteo = (select COUNT(*) FROM #TmpAlumnoIdAsistencia);
 	IF @Conteo > 0 BEGIN
 		INSERT Asistencia(MateriaHorarioProfesorAlumnoId, AlumnoId, Asistio, FechaClase, FechaAsistencia)
@@ -928,6 +928,56 @@ END
 GO
 	PRINT 'El procedimiento [dbo].[Sp_Insertar_Asistencia_Profesor] ha sido creado correctamente.'
 GO
+GO
+	IF OBJECT_ID('Sp_Baja_Alumno_De_Clase') IS NOT NULL BEGIN
+		DROP PROCEDURE [dbo].[Sp_Baja_Alumno_De_Clase];
+	END
+GO
+CREATE PROCEDURE [dbo].[Sp_Baja_Alumno_De_Clase](
+@NombreAlumno NVARCHAR(90),
+@CodigoClase NVARCHAR(90),
+@RazonBaja NVARCHAR(25)
+)
+AS
+BEGIN
+	--Declare Variables For process
+	DECLARE @AlumnoId BIGINT;
+	DECLARE @ClaseIdMaster INT;
+	DECLARE @RazonBajaId TINYINT;
+
+	SET @AlumnoId = (SELECT al.AlumnoId FROM Alumno al
+					 JOIN Usuario us ON us.UsuarioId = al.UsuarioId
+					 WHERE (us.Nombres+ ' '+us.Apellidos) = @NombreAlumno);
+	SET @RazonBajaId = (SELECT RazonBajaId FROM RazonBaja WHERE DescripcionRazon = @RazonBaja);
+	SET @ClaseIdMaster = (SELECT 
+									MateriaHorarioProfesorAlumnoId
+									FROM MateriaHorarioProfesor mhp
+									JOIN MateriaHorario mh ON mhp.MateriaHorarioId =mh.MateriaHorarioId
+									JOIN Materia m ON m.MateriaId = mh.MateriaId
+									JOIN Horario h ON h.HorarioId = mh.HorarioId
+									JOIN Aula a ON a.AulaId = mh.AulaId
+									JOIN DiaClase dc ON dc.DiaClaseId = mh.DiaClaseId
+									JOIN Profesor p ON p.ProfesorId =mhp.ProfesorId
+									LEFT JOIN MateriaHorarioProfesorAlumno mhpa ON mhp.MateriaHorarioProfesorId = mhpa.MateriaHorarioProfesorId
+									WHERE CAST(p.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar)= @CodigoClase
+									AND mhpa.AlumnoId = @AlumnoId AND mhpa.FechaBaja IS NULL);
+	IF @RazonBajaId IS NULL BEGIN
+		INSERT INTO [dbo].[RazonBaja](DescripcionRazon) VALUES(@RazonBaja);
+		SET @RazonBajaId = (SELECT RazonBajaId FROM RazonBaja WHERE DescripcionRazon = @RazonBaja);
+	END
+
+	IF @ClaseIdMaster IS NOT NULL AND @AlumnoId IS NOT NULL BEGIN
+		UPDATE MateriaHorarioProfesorAlumno SET FechaBaja = GETDATE(),RazonBajaId = @RazonBajaId WHERE MateriaHorarioProfesorAlumnoId = @ClaseIdMaster;
+		SELECT 0 [Rsp], 'El alumno fue dado de baja de la clase con el código: "'+@CodigoClase+'".' [Msg];
+	END
+	ELSE BEGIN 
+		SELECT -1 [Rsp], 'El alumno no existe o no esta registrado en la clase con el código: "'+@CodigoClase+'".' [Msg];
+	END
+END
+GO
+	PRINT 'El procedimiento [dbo].[Sp_Baja_Alumno_De_Clase] se ha creado correctamente.';
+GO
+
 GO
 IF OBJECT_ID('Fn_Verificar_Horario_existente_Alumno') IS NOT NULL BEGIN
 	DROP FUNCTION [dbo].[Fn_Verificar_Horario_existente_Alumno];
@@ -1071,4 +1121,13 @@ END
 GO
 	PRINT 'Se creó el disparador [dbo].[Tr_Crear_Fila_Relacion_Materia] correctamente'
 GO*/
+--Updates para productivo
+/*
+
+ALTER TABLE [dbo].[MateriaHorarioProfesorAlumno] 
+ADD FechaBaja DATETIME DEFAULT GETDATE();
+ALTER TABLE [dbo].[MateriaHorarioProfesorAlumno] 
+ADD RazonBajaId TINYINT DEFAULT NULL;
+
+*/
 USE master;
