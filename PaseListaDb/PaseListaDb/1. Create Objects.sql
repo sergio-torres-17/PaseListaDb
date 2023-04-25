@@ -663,7 +663,7 @@ WHERE (us.Nombres +' '+us.Apellidos) = @Nombre AND mhpa.FechaBaja IS NULL
 GO
 GO
 	IF OBJECT_ID('Login') IS NOT NULL BEGIN
-		DROP PROCEDURE [dbo].[Login];
+		DROP PROCEDURE [dbo].[Login]
 	END
 GO
 CREATE PROCEDURE [dbo].[Login](
@@ -760,6 +760,11 @@ BEGIN
 		print 'No paso'
 	END
 	END
+	ELSE BEGIN
+		SELECT -1 [Rsp], NULL [Token], NULL [Username], NULL [UserType], NULL [NombreCompleto], NULL [Imagen], NULL [Secciones];
+		print 'No paso'
+	end
+	
 
 END
 GO
