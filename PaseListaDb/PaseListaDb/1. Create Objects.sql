@@ -754,7 +754,7 @@ BEGIN
 										JOIN [Security].[CredencialAcceso] ca ON ca.UsuarioId = us.UsuarioId
 										WHERE cast(ad.Correo as varchar) = @Username AND ca.Password = HASHBYTES('SHA2_512',CAST(@PasswordEncrypted AS VARCHAR(100))));
 
-					SELECT 0 [Rsp], '+' [Token], CAST(@Username AS varchar) [Username], @TipoUsuario [UserType], @NombreCompleto [NombreCompleto], @RutaImagen [Imagen], '[{"NombreSeccion":"Menu Principal","Referencia": "index.html"},{"NombreSeccion":"Alta Clases","Referencia": "AltaClases.html"},{"NombreSeccion":"Alta profesores","Referencia": "VerMaterias.html"},{"NombreSeccion":"Alta Alumnos","Referencia": "VerMaterias.html"}]' [Secciones];
+					SELECT 0 [Rsp], '+' [Token], @Username [Username], @TipoUsuario [UserType], @NombreCompleto [NombreCompleto], @RutaImagen [Imagen], '[{"NombreSeccion":"Menu Principal","Referencia": "index.html"},{"NombreSeccion":"Alta Clases","Referencia": "AltaClases.html"},{"NombreSeccion":"Alta profesores","Referencia": "VerMaterias.html"},{"NombreSeccion":"Alta Alumnos","Referencia": "VerMaterias.html"}]' [Secciones];
 				end
 				ELSE BEGIN
 					SELECT -1 [Rsp], NULL [Token], NULL [Username], NULL [UserType], NULL [NombreCompleto], NULL [Imagen], NULL [Secciones];
