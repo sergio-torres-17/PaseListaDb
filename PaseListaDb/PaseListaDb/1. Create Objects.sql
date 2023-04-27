@@ -661,9 +661,9 @@ JOIN Usuario us ON US.UsuarioId = AL.UsuarioId
 WHERE (us.Nombres +' '+us.Apellidos) = @Nombre AND mhpa.FechaBaja IS NULL
 ;
 GO
-GO
+	GO
 	IF OBJECT_ID('Login') IS NOT NULL BEGIN
-		DROP PROCEDURE [dbo].[Login]
+		DROP PROCEDURE [dbo].[Login];
 	END
 GO
 CREATE PROCEDURE [dbo].[Login](
@@ -672,20 +672,15 @@ CREATE PROCEDURE [dbo].[Login](
 )
 AS
 BEGIN
-	/*--PARAMETROS
-	DECLARE @Username NVARCHAR(25)
-	DECLARE @PasswordEncrypted NVARCHAR(MAX);
-	--SIMULACION DE PARAMETROS
-	SET @Username = '2323006'
-	SET @PasswordEncrypted = '5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5';*/
-	--Inicio de proceso
+
+--Inicio de proceso
 	DECLARE @TipoUsuario INT;
 	DECLARE @NombreCompleto NVARCHAR(150)
 	DECLARE @RutaImagen NVARCHAR(MAX);
 	SET @TipoUsuario = (SELECT [dbo].[Fn_Buscar_Tipo_Usuario](@Username));
-	
+
 	IF @TipoUsuario != 400 BEGIN
-		/***********************************************Login para profesores***********************************************/
+	/***********************************************Login para profesores***********************************************/
 		IF @TipoUsuario = 1050 BEGIN
 			SET @NombreCompleto = (SELECT us.Nombres+' '+us.Apellidos  FROM Usuario us
 									JOIN Profesor pr ON us.UsuarioId = pr.UsuarioId
@@ -713,6 +708,7 @@ BEGIN
 				print 'paso profesores sin login'
 			END
 		END
+
 		/**************************************************Login alumnos**************************************************/
 		IF @TipoUsuario = 1150 BEGIN
 			SET @NombreCompleto = (SELECT us.Nombres+' '+us.Apellidos  FROM Usuario us
@@ -720,22 +716,34 @@ BEGIN
 									JOIN [Security].[CredencialAcceso] ca ON ca.UsuarioId = us.UsuarioId
 									WHERE cast(al.AlumnoId as varchar) = @Username AND ca.Password = HASHBYTES('SHA2_512',CAST(@PasswordEncrypted AS VARCHAR(100))));
 			
-			IF @NombreCompleto IS NOT NULL BEGIN
-				SET @RutaImagen =(SELECT CASE
-									WHEN us.Foto IS NULL THEN ''
-									ELSE us.Foto
-									END 
-									FROM Usuario us
-									JOIN Alumno al ON al.UsuarioId = us.UsuarioId
-									JOIN [Security].[CredencialAcceso] ca ON ca.UsuarioId = us.UsuarioId
-									WHERE cast(al.AlumnoId as varchar) = @Username AND ca.Password = HASHBYTES('SHA2_512',CAST(@PasswordEncrypted AS VARCHAR(100))));
-
-				SELECT 0 [Rsp], '+' [Token], CAST(@Username AS varchar) [Username], @TipoUsuario [UserType], @NombreCompleto [NombreCompleto], @RutaImagen [Imagen], '[{"NombreSeccion":"Menu Principal","Referencia": "index.html"},{"NombreSeccion":"Alta Clases","Referencia": "AltaClases.html"},{"NombreSeccion":"Mi horario","Referencia": "VerMaterias.html"},{"NombreSeccion":"Mi historial","Referencia": "Historial.html"}]' [Secciones];
-			IF @TipoUsuario = 1000 BEGIN
-				SET @NombreCompleto = (SELECT us.Nombres+' '+us.Apellidos  FROM Usuario us
-										JOIN Administradores ad ON ad.UsuarioId = us.UsuarioId
+				IF @NombreCompleto IS NOT NULL BEGIN
+					SET @RutaImagen =(SELECT CASE
+										WHEN us.Foto IS NULL THEN ''
+										ELSE us.Foto
+										END 
+										FROM Usuario us
+										JOIN Alumno al ON al.UsuarioId = us.UsuarioId
 										JOIN [Security].[CredencialAcceso] ca ON ca.UsuarioId = us.UsuarioId
-										WHERE cast(ad.Correo as varchar) = @Username AND ca.Password = HASHBYTES('SHA2_512',CAST(@PasswordEncrypted AS VARCHAR(100))));
+										WHERE cast(al.AlumnoId as varchar) = @Username AND ca.Password = HASHBYTES('SHA2_512',CAST(@PasswordEncrypted AS VARCHAR(100))));
+
+					SELECT 0 [Rsp], '+' [Token], CAST(@Username AS varchar) [Username], @TipoUsuario [UserType], @NombreCompleto [NombreCompleto], @RutaImagen [Imagen], '[{"NombreSeccion":"Menu Principal","Referencia": "index.html"},{"NombreSeccion":"Alta Clases","Referencia": "AltaClases.html"},{"NombreSeccion":"Mi horario","Referencia": "VerMaterias.html"},{"NombreSeccion":"Mi historial","Referencia": "Historial.html"}]' [Secciones];
+			
+				END
+				ELSE BEGIN
+					SELECT -1 [Rsp], NULL [Token], NULL [Username], NULL [UserType], NULL [NombreCompleto], NULL [Imagen], NULL [Secciones];
+					print 'paso ALUMNOS sin login'
+				END
+			end
+		/**************************************************Login Administradores**************************************************/
+
+		IF @TipoUsuario = 1000 BEGIN
+				PRINT @Username
+				PRINT @PasswordEncrypted
+				SET @NombreCompleto = (SELECT us.Nombres+' '+us.Apellidos  FROM Usuario us
+									JOIN Administradores ad ON ad.UsuarioId = us.UsuarioId
+									JOIN [Security].[CredencialAcceso] ca ON ca.UsuarioId = ad.UsuarioId
+									WHERE ad.Correo = @Username AND ca.Password =HASHBYTES('SHA2_512',CAST(@PasswordEncrypted AS VARCHAR(100))));
+										
 				IF @NombreCompleto IS NOT NULL BEGIN
 					SET @RutaImagen =(SELECT CASE
 										WHEN us.Foto IS NULL THEN ''
@@ -748,25 +756,16 @@ BEGIN
 
 					SELECT 0 [Rsp], '+' [Token], CAST(@Username AS varchar) [Username], @TipoUsuario [UserType], @NombreCompleto [NombreCompleto], @RutaImagen [Imagen], '[{"NombreSeccion":"Menu Principal","Referencia": "index.html"},{"NombreSeccion":"Alta Clases","Referencia": "AltaClases.html"},{"NombreSeccion":"Alta profesores","Referencia": "VerMaterias.html"},{"NombreSeccion":"Alta Alumnos","Referencia": "VerMaterias.html"}]' [Secciones];
 				end
-			END
-			ELSE BEGIN
-				SELECT -1 [Rsp], NULL [Token], NULL [Username], NULL [UserType], NULL [NombreCompleto], NULL [Imagen], NULL [Secciones];
-				print 'paso estudiantes sin login'
-			END
-		END
-	END 
-	ELSE BEGIN
-		SELECT -1 [Rsp], NULL [Token], NULL [Username], NULL [UserType], NULL [NombreCompleto], NULL [Imagen], NULL [Secciones];
-		print 'No paso'
-	END
+				ELSE BEGIN
+					SELECT -1 [Rsp], NULL [Token], NULL [Username], NULL [UserType], NULL [NombreCompleto], NULL [Imagen], NULL [Secciones];
+					print 'paso ADMIN sin login'
+				END
+		end
 	END
 	ELSE BEGIN
 		SELECT -1 [Rsp], NULL [Token], NULL [Username], NULL [UserType], NULL [NombreCompleto], NULL [Imagen], NULL [Secciones];
-		print 'No paso'
-	end
-	
-
-END
+	END
+end
 GO
 	IF OBJECT_ID('Sp_Insertar_Asistencia') IS NOT NULL BEGIN
 		DROP PROCEDURE [dbo].[Sp_Insertar_Asistencia];
