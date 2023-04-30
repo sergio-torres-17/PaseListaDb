@@ -754,7 +754,7 @@ BEGIN
 										JOIN [Security].[CredencialAcceso] ca ON ca.UsuarioId = us.UsuarioId
 										WHERE cast(ad.Correo as varchar) = @Username AND ca.Password = HASHBYTES('SHA2_512',CAST(@PasswordEncrypted AS VARCHAR(100))));
 
-					SELECT 0 [Rsp], '+' [Token], @Username [Username], @TipoUsuario [UserType], @NombreCompleto [NombreCompleto], @RutaImagen [Imagen], '[{"NombreSeccion":"Menu Principal","Referencia": "index.html"},{"NombreSeccion":"Alta Clases","Referencia": "AltaClases.html"},{"NombreSeccion":"Alta profesores","Referencia": "AltaProfesores.html"},{"NombreSeccion":"Alta Alumnos","Referencia": "AltaProfesores.html"}]' [Secciones];
+					SELECT 0 [Rsp], '+' [Token], @Username [Username], @TipoUsuario [UserType], @NombreCompleto [NombreCompleto], @RutaImagen [Imagen], '[{"NombreSeccion":"Menu Principal","Referencia": "index.html"},{"NombreSeccion":"Alta Clases","Referencia": "AltaClases.html"},{"NombreSeccion":"Alta profesores","Referencia": "AltaProfesores.html"},{"NombreSeccion":"Alta Alumnos","Referencia": "AltaAlumnos.html"}]' [Secciones];
 				end
 				ELSE BEGIN
 					SELECT -1 [Rsp], NULL [Token], NULL [Username], NULL [UserType], NULL [NombreCompleto], NULL [Imagen], NULL [Secciones];
@@ -1250,6 +1250,28 @@ CREATE VIEW [dbo].[Vw_Profesores_Principal]
 AS
 select pr.ProfesorId, us.UsuarioId, us.Nombres, us.Apellidos, pr.Correo,us.Edad,us.Foto from Profesor pr
 JOIN Usuario us ON us.UsuarioId = pr.UsuarioId
+GO
+	IF OBJECT_ID('Vw_Clases_Dia_Vista') IS NOT NULL BEGIN
+		DROP VIEW [dbo].[Vw_Clases_Dia_Vista];
+	END
+GO
+CREATE VIEW [dbo].[Vw_Clases_Dia_Vista]
+AS
+select distinct
+CAST(p.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) [IdClase]
+,m.Nombre [Materia]
+,a.Nombre [Aula]
+,dc.Nombre [Día]
+,h.Descripcion [Hora]
+
+from MateriaHorarioProfesorAlumno mhpa
+JOIN MateriaHorarioProfesor mhp ON mhp.MateriaHorarioProfesorId = mhpa.MateriaHorarioProfesorId
+JOIN MateriaHorario mh ON mh.MateriaHorarioId = MHP.MateriaHorarioId
+JOIN Materia m ON m.MateriaId = mh.MateriaId
+JOIN Horario h ON h.HorarioId = mh.HorarioId
+JOIN Aula a ON a.AulaId = mh.AulaId
+JOIN DiaClase dc ON dc.DiaClaseId = mh.DiaClaseId
+JOIN Profesor p ON p.ProfesorId = mhp.ProfesorId
 GO
 /************************************************************************************/
 /************************************Disparadores************************************/
