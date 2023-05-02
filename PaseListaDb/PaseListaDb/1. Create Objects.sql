@@ -86,7 +86,7 @@ MateriaHorarioProfesorAlumnoId INT PRIMARY KEY IDENTITY(1,1),
 MateriaHorarioProfesorId INT,
 AlumnoId INT,
 FechaInsercion DATETIME NOT NULL,
-FechaBaja DATETIME DEFAULT GETDATE(),
+FechaBaja DATETIME,
 RazonBajaId TINYINT DEFAULT NULL
 );
 CREATE TABLE Asistencia(

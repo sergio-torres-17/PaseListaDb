@@ -11,7 +11,7 @@ INSERT INTO [dbo].[DiaClase]([Nombre],[FechaInsercion]) VALUES ('Viernes',GETDAT
 -- Aulas
 INSERT INTO [dbo].[Aula]([Nombre],[FechaInsercion]) VALUES('A',GETDATE())
 INSERT INTO [dbo].[Aula]([Nombre],[FechaInsercion]) VALUES('B',GETDATE())
-INSERT INTO [dbo].[Aula]([Nombre],[FechaInsercion]) VALUES('C',GETDATE())n
+INSERT INTO [dbo].[Aula]([Nombre],[FechaInsercion]) VALUES('C',GETDATE())
 INSERT INTO [dbo].[Aula]([Nombre],[FechaInsercion]) VALUES('D',GETDATE())
 INSERT INTO [dbo].[Aula]([Nombre],[FechaInsercion]) VALUES('E',GETDATE())
 --Insertar Horarios
