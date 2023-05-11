@@ -44,7 +44,8 @@ FechaInsercion DATETIME NOT NULL
 CREATE TABLE Aula(
 AulaId BIGINT PRIMARY KEY IDENTITY(1,1),
 Nombre NVARCHAR(20) NOT NULL,
-FechaInsercion DATETIME NOT NULL
+FechaInsercion DATETIME NOT NULL,
+Active BIT NOT NULL DEFAULT 1
 );
 CREATE TABLE DiaClase(
 DiaClaseId TINYINT PRIMARY KEY IDENTITY(1,1),
@@ -432,7 +433,7 @@ GO
 	PRINT 'Procedimiento almacenado [dbo].[Sp_Registrar_Alumno_en_Clase] se ha creado correctamente';
 GO
 
---Registrar Alumno en materia-horario-maestro
+--Registrar Alumno en materia-horario-maestroo
 IF OBJECT_ID('Sp_Registrar_Asistencia') IS NOT NULL BEGIN
 	DROP PROCEDURE [dbo].[Sp_Registrar_Asistencia];
 END
@@ -726,7 +727,7 @@ BEGIN
 										JOIN [Security].[CredencialAcceso] ca ON ca.UsuarioId = us.UsuarioId
 										WHERE cast(al.AlumnoId as varchar) = @Username AND ca.Password = HASHBYTES('SHA2_512',CAST(@PasswordEncrypted AS VARCHAR(100))));
 
-					SELECT 0 [Rsp], '+' [Token], CAST(@Username AS varchar) [Username], @TipoUsuario [UserType], @NombreCompleto [NombreCompleto], @RutaImagen [Imagen], '[{"NombreSeccion":"Menu Principal","Referencia": "index.html"},{"NombreSeccion":"Alta Clases","Referencia": "AltaClases.html"},{"NombreSeccion":"Mi horario","Referencia": "VerMaterias.html"},{"NombreSeccion":"Mi historial","Referencia": "Historial.html"}]' [Secciones];
+					SELECT 0 [Rsp], '+' [Token], CAST(@Username AS varchar) [Username], @TipoUsuario [UserType], @NombreCompleto [NombreCompleto], @RutaImagen [Imagen], '[{"NombreSeccion":"Menu Principal","Referencia": "index.html"},{"NombreSeccion":"Alta Clases","Referencia": "AltaClases.html"},{"NombreSeccion":"Mi horario","Referencia": "Horario.html"},{"NombreSeccion":"Mi historial","Referencia": "Historial.html"}]' [Secciones];
 			
 				END
 				ELSE BEGIN
@@ -754,7 +755,7 @@ BEGIN
 										JOIN [Security].[CredencialAcceso] ca ON ca.UsuarioId = us.UsuarioId
 										WHERE cast(ad.Correo as varchar) = @Username AND ca.Password = HASHBYTES('SHA2_512',CAST(@PasswordEncrypted AS VARCHAR(100))));
 
-					SELECT 0 [Rsp], '+' [Token], @Username [Username], @TipoUsuario [UserType], @NombreCompleto [NombreCompleto], @RutaImagen [Imagen], '[{"NombreSeccion":"Menu Principal","Referencia": "index.html"},{"NombreSeccion":"Alta Clases","Referencia": "AltaClases.html"},{"NombreSeccion":"Alta profesores","Referencia": "AltaProfesores.html"},{"NombreSeccion":"Alta Alumnos","Referencia": "AltaAlumnos.html"}]' [Secciones];
+					SELECT 0 [Rsp], '+' [Token], @Username [Username], @TipoUsuario [UserType], @NombreCompleto [NombreCompleto], @RutaImagen [Imagen], '[{"NombreSeccion":"Menu Principal","Referencia": "index.html"},{"NombreSeccion":"Alta Clases","Referencia": "AltaClases.html"},{"NombreSeccion":"Alta profesores","Referencia": "AltaProfesores.html"},{"NombreSeccion":"Alta Alumnos","Referencia": "AltaAlumnos.html"}, {"NombreSeccion":"Gestion Principal", "Referencia": "GestionPrincipal.html"}]' [Secciones];
 				end
 				ELSE BEGIN
 					SELECT -1 [Rsp], NULL [Token], NULL [Username], NULL [UserType], NULL [NombreCompleto], NULL [Imagen], NULL [Secciones];
@@ -1261,9 +1262,8 @@ select distinct
 CAST(p.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) [IdClase]
 ,m.Nombre [Materia]
 ,a.Nombre [Aula]
-,dc.Nombre [Día]
+,dc.Nombre [Dia]
 ,h.Descripcion [Hora]
-
 from MateriaHorarioProfesorAlumno mhpa
 JOIN MateriaHorarioProfesor mhp ON mhp.MateriaHorarioProfesorId = mhpa.MateriaHorarioProfesorId
 JOIN MateriaHorario mh ON mh.MateriaHorarioId = MHP.MateriaHorarioId
