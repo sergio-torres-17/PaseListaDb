@@ -18,12 +18,24 @@ AlumnoId INT PRIMARY KEY ,
 UsuarioId BIGINT NOT NULL,
 FechaInsercion DATETIME NOT NULL
 );
+CREATE TABLE [dbo].[MainLog](
+MainLogId BIGINT PRIMARY KEY IDENTITY(1,1),
+UsuarioId BIGINT,
+Descripcion NVARCHAR(MAX) NOT NULL,
+FechaInsercion DATETIME
+);
 CREATE TABLE Profesor(
 ProfesorId INT PRIMARY KEY IDENTITY(1,1),
 UsuarioId BIGINT,
 Correo NVARCHAR(90) NOT NULL,
 Especialidad NVARCHAR(100),
 FechaInsercion DATETIME NOT NULL
+);
+CREATE TABLE [dbo].[SesionToken](
+SesionTokenId BIGINT IDENTITY(1,1) PRIMARY KEY,
+UsuarioId BIGINT,
+Token NVARCHAR(MAX) NOT NULL,
+FechaInsercion DATETIME
 );
 CREATE TABLE [Security].[CredencialAcceso](
 CredencialesAccesoId BIGINT PRIMARY KEY IDENTITY(1,1),
@@ -34,7 +46,8 @@ FechaInsercion DATETIME NOT NULL DEFAULT GETDATE()
 CREATE TABLE Grado(
 GradoId TINYINT PRIMARY KEY IDENTITY(1,1),
 Nombre NVARCHAR(150) NOT NULL,
-FechaInsercion DATETIME NOT NULL
+FechaInsercion DATETIME NOT NULL,
+Active BIT NOT NULL DEFAULT 1
 );
 CREATE TABLE Horario(
 HorarioId INT PRIMARY KEY IDENTITY(1,1),
@@ -50,6 +63,7 @@ Active BIT NOT NULL DEFAULT 1
 CREATE TABLE DiaClase(
 DiaClaseId TINYINT PRIMARY KEY IDENTITY(1,1),
 Nombre NVARCHAR(15) NOT NULL,
+Active BIT NOT NULL DEFAULT 1,
 FechaInsercion DATETIME NOT NULL
 )
 /****************************************************************/
@@ -153,6 +167,13 @@ ALTER TABLE [dbo].[Administradores]
 ADD CONSTRAINT Fk_Administrator_UsuarioId
 FOREIGN KEY (UsuarioId) REFERENCES Usuario(UsuarioId);
 GO
+ALTER TABLE [dbo].[MainLog]
+ADD CONSTRAINT Fk_MainLog_UsuarioId
+FOREIGN KEY (UsuarioId) REFERENCES Usuario(UsuarioId);
+GO
+ALTER TABLE [dbo].[SesionToken]
+ADD CONSTRAINT Fk_SesionToken_UsuarioId
+FOREIGN KEY (UsuarioId) REFERENCES [dbo].[Usuario]([UsuarioId])
 /**************************************************************************/
 /******************************Procedimientos******************************/
 /**************************************************************************/
@@ -1272,6 +1293,16 @@ JOIN Horario h ON h.HorarioId = mh.HorarioId
 JOIN Aula a ON a.AulaId = mh.AulaId
 JOIN DiaClase dc ON dc.DiaClaseId = mh.DiaClaseId
 JOIN Profesor p ON p.ProfesorId = mhp.ProfesorId
+GO
+GO
+ IF OBJECT_ID('Vw_Main_Log') IS NOT NULL BEGIN
+	DROP VIEW [dbo].[Vw_Main_Log];
+ END
+GO
+CREATE VIEW [dbo].[Vw_Main_Log]
+AS
+select MainLogId [Id], Descripcion [Accion], (us.Nombres+' '+us.Apellidos) [Usuario], CAST(ml.FechaInsercion AS DATE)[Fecha], CAST(ml.FechaInsercion AS time)[Hora] from MainLog ml
+JOIN Usuario us ON us.UsuarioId = ml.UsuarioId
 GO
 /************************************************************************************/
 /************************************Disparadores************************************/
