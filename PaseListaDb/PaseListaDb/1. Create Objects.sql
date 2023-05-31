@@ -563,8 +563,10 @@ JOIN Aula a ON a.AulaId = mh.AulaId
 JOIN Profesor p ON p.ProfesorId = mhp.ProfesorId
 JOIN Horario h ON mh.HorarioId = h.HorarioId
 JOIN (select pr.ProfesorId, (us.Nombres + ' '+us.Apellidos) [NombreProfesor] from Usuario us 
-left JOIN Profesor pr ON pr.UsuarioId = us.UsuarioId) prf on mhp.ProfesorId = prf.ProfesorId
-WHERE D.Active = 1 AND A.Active = 1 
+JOIN Profesor pr ON pr.UsuarioId = us.UsuarioId) prf on mhp.ProfesorId = prf.ProfesorId
+JOIN Alumno al ON al.AlumnoId <> mhpa.AlumnoId
+JOIN Usuario us ON us.UsuarioId = al.UsuarioId
+WHERE D.Active = 1 AND A.Active = 1 and (us.Nombres + ' '+us.Apellidos)= @Nombre
 end
 GO
 GO
