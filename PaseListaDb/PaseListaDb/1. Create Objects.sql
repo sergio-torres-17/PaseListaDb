@@ -531,14 +531,41 @@ GO
 		DROP procedure [dbo].[Sp_Clases_Total_Vista];
 	END
 GO
-CREATE procedure [dbo].[Sp_Clases_Total_Vista]
+CREATE procedure [dbo].[Sp_Clases_Total_Vista](@Nombre NVARCHAR(130))
 AS
-select m.Nombre [Materia], a.Nombre [Aula], dc.Nombre [Dia], h.Descripcion [Horario] FROM MateriaHorario mh
+begin
+
+DECLARE @GradoId INT;
+
+
+SET @GradoId = (select TOP 1 m.MateriaId from MateriaHorarioProfesorAlumno mhpa
+JOIN MateriaHorarioProfesor mhp ON mhp.MateriaHorarioProfesorId = mhpa.MateriaHorarioProfesorId
+JOIN MateriaHorario mh ON mh.MateriaHorarioId = mhp.MateriaHorarioId
 JOIN Materia m ON m.MateriaId = mh.MateriaId
-JOIN Horario h ON h.HorarioId = mh.HorarioId
+JOIN Alumno al ON MHPA.AlumnoId = AL.AlumnoId
+JOIN Usuario us ON us.UsuarioId = al.UsuarioId
+WHERE (US.Nombres + ' '+ US.Apellidos) = @Nombre)
+
+print	@gradoId
+
+SELECT distinct CAST(p.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) [CodigoClase]
+,d.Nombre [Dia]
+,h.Descripcion [Horario]
+,m.Nombre [Materia]
+,prf.NombreProfesor [Profesor]
+,a.Nombre [Aula]
+FROM MateriaHorarioProfesorAlumno mhpa
+JOIN MateriaHorarioProfesor mhp ON mhp.MateriaHorarioProfesorId =  mhpa.MateriaHorarioProfesorId
+JOIN MateriaHorario mh ON mhp.MateriaHorarioId = mh.MateriaHorarioId
+JOIN Materia m ON m.MateriaId = mh.MateriaId
+JOIN DiaClase d ON d.DiaClaseId = mh.DiaClaseId
 JOIN Aula a ON a.AulaId = mh.AulaId
-JOIN DiaClase dc ON dc.DiaClaseId = mh.DiaClaseId
-ORDER BY dc.DiaClaseId asc
+JOIN Profesor p ON p.ProfesorId = mhp.ProfesorId
+JOIN Horario h ON mh.HorarioId = h.HorarioId
+JOIN (select pr.ProfesorId, (us.Nombres + ' '+us.Apellidos) [NombreProfesor] from Usuario us 
+left JOIN Profesor pr ON pr.UsuarioId = us.UsuarioId) prf on mhp.ProfesorId = prf.ProfesorId
+WHERE D.Active = 1 AND A.Active = 1 
+end
 GO
 GO
 	IF OBJECT_ID('Sp_Insertar_Maestro_En_Clase') IS NOT NULL BEGIN
@@ -665,11 +692,12 @@ GO
 GO
 CREATE PROCEDURE Sp_View_Mis_Materias(@Nombre NVARCHAR(60))
 AS
-SELECT CAST(p.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) [CodigoClase]
+SELECT distinct CAST(p.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) [CodigoClase]
 ,d.Nombre [Dia]
 ,h.Descripcion [Horario]
 ,m.Nombre [Materia]
-,us.Nombres [Profesor]
+,prf.NombreProfesor [Profesor]
+,a.Nombre [Aula]
 FROM MateriaHorarioProfesorAlumno mhpa
 JOIN MateriaHorarioProfesor mhp ON mhp.MateriaHorarioProfesorId =  mhpa.MateriaHorarioProfesorId
 JOIN MateriaHorario mh ON mhp.MateriaHorarioId = mh.MateriaHorarioId
@@ -679,9 +707,11 @@ JOIN Aula a ON a.AulaId = mh.AulaId
 JOIN Profesor p ON p.ProfesorId = mhp.ProfesorId
 JOIN Horario h ON mh.HorarioId = h.HorarioId
 JOIN Alumno al ON al.AlumnoId = mhpa.AlumnoId
+JOIN (select pr.ProfesorId, (us.Nombres + ' '+us.Apellidos) [NombreProfesor] from Usuario us 
+JOIN Profesor pr ON pr.UsuarioId = us.UsuarioId) prf on mhp.ProfesorId = prf.ProfesorId
 JOIN Usuario us ON US.UsuarioId = AL.UsuarioId
-WHERE (us.Nombres +' '+us.Apellidos) = @Nombre AND mhpa.FechaBaja IS NULL
-;
+WHERE D.Active = 1 AND A.Active = 1
+and (us.Nombres + ' '+us.Apellidos)= @Nombre
 GO
 GO
 	IF OBJECT_ID('Login') IS NOT NULL BEGIN
