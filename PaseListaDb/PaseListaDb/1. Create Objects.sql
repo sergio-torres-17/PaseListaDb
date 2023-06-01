@@ -351,6 +351,7 @@ BEGIN
 	DECLARE @MateriaHorarioProfesor BIGINT;
 	DECLARE @TieneHorarioExistente BIT;
 	DECLARE @HorarioClase NVARCHAR(15);
+	DECLARE @DiaClase NVARCHAR(25)
 
 
 	SET @MateriaHorarioProfesor = (SELECT DISTINCT
@@ -377,8 +378,23 @@ BEGIN
 									JOIN DiaClase dc ON dc.DiaClaseId = mh.DiaClaseId
 									JOIN Profesor p ON p.ProfesorId =mhp.ProfesorId
 									LEFT JOIN MateriaHorarioProfesorAlumno mhpa ON mhp.MateriaHorarioProfesorId = mhpa.MateriaHorarioProfesorId
-									WHERE CAST(p.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) = @CodigoClase);
-
+									WHERE CAST(p.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) = @CodigoClase
+									and FechaBaja is null and RazonBajaId is null
+									);
+	SET @DiaClase = (SELECT DISTINCT
+									dc.Nombre
+									FROM MateriaHorarioProfesor mhp
+									JOIN MateriaHorario mh ON mhp.MateriaHorarioId =mh.MateriaHorarioId
+									JOIN Materia m ON m.MateriaId = mh.MateriaId
+									JOIN Horario h ON h.HorarioId = mh.HorarioId
+									JOIN Aula a ON a.AulaId = mh.AulaId
+									JOIN DiaClase dc ON dc.DiaClaseId = mh.DiaClaseId
+									JOIN Profesor p ON p.ProfesorId =mhp.ProfesorId
+									LEFT JOIN MateriaHorarioProfesorAlumno mhpa ON mhp.MateriaHorarioProfesorId = mhpa.MateriaHorarioProfesorId
+									WHERE CAST(p.ProfesorId AS varchar)+CAST(mh.MateriaId AS varchar)+CAST(mh.HorarioId AS varchar)+'-'+CAST(mh.AulaId AS varchar)+CAST(mh.DiaClaseId AS varchar) = @CodigoClase
+									and FechaBaja is null and RazonBajaId is null
+									);
+	print @HorarioClase
 	IF @MateriaHorarioProfesor IS NOT NULL BEGIN
 		IF @AlumnoId IS NOT NULL BEGIN
 			set @Cupo = ((SELECT DISTINCT
@@ -415,18 +431,20 @@ BEGIN
 									);
 			
 			IF @Cupo> 0 AND (@Cupo - 1) >= 0 BEGIN
-				SET @ExisteAlumnoEnClase = (SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END FROM MateriaHorarioProfesorAlumno WHERE AlumnoId = @AlumnoId AND MateriaHorarioProfesorId = @MateriaHorarioProfesor);
+				SET @ExisteAlumnoEnClase = (SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END FROM MateriaHorarioProfesorAlumno WHERE AlumnoId = @AlumnoId AND MateriaHorarioProfesorId = @MateriaHorarioProfesor and FechaBaja is null and RazonBajaId is null);
 				IF @ExisteAlumnoEnClase = 0 BEGIN
-					SET @TieneHorarioExistente = (select [dbo].[Fn_Verificar_Horario_existente_Alumno](@NombreAlumno, @HorarioClase, @HorarioClase));
+					SET @TieneHorarioExistente = (select [dbo].[Fn_Verificar_Horario_existente_Alumno](@NombreAlumno, @HorarioClase, @DiaClase));
 					IF @TieneHorarioExistente = 0 BEGIN
 						INSERT INTO [dbo].[MateriaHorarioProfesorAlumno]
 							   ([MateriaHorarioProfesorId]
 							   ,[AlumnoId]
-							   ,[FechaInsercion])
+							   ,[FechaInsercion]
+							   ,[FechaBaja])
 						 VALUES
 							   (@MateriaHorarioProfesor
 							   ,@AlumnoId
-							   ,GETDATE())
+							   ,GETDATE()
+							   ,NULL)
 						SELECT 0 [Rsp], 'Se dió de alta al alumno '+@NombreAlumno+' en la clase  '+@CodigoClase+' correctamente.' [Msg]
 					END
 					ELSE BEGIN
@@ -713,7 +731,7 @@ JOIN (select pr.ProfesorId, (us.Nombres + ' '+us.Apellidos) [NombreProfesor] fro
 JOIN Profesor pr ON pr.UsuarioId = us.UsuarioId) prf on mhp.ProfesorId = prf.ProfesorId
 JOIN Usuario us ON US.UsuarioId = AL.UsuarioId
 WHERE D.Active = 1 AND A.Active = 1
-and (us.Nombres + ' '+us.Apellidos)= @Nombre
+and (us.Nombres + ' '+us.Apellidos)= @Nombre and FechaBaja is null and RazonBajaId is null
 GO
 GO
 	IF OBJECT_ID('Login') IS NOT NULL BEGIN
@@ -1155,7 +1173,7 @@ JOIN Profesor p ON p.ProfesorId = mhp.ProfesorId
 JOIN Horario h ON mh.HorarioId = h.HorarioId
 JOIN Alumno al ON al.AlumnoId = mhpa.AlumnoId
 JOIN Usuario us ON us.UsuarioId = al.UsuarioId
-WHERE (us.Nombres +' '+us.Apellidos) = @NombreAlumno AND h.Descripcion = @Horario AND d.Nombre = @DiaClase);
+WHERE (us.Nombres +' '+us.Apellidos) = @NombreAlumno AND h.Descripcion = @Horario AND d.Nombre = @DiaClase and FechaBaja is null and RazonBajaId is null);
 end
 GO
 GO
