@@ -826,7 +826,7 @@ BEGIN
 										JOIN [Security].[CredencialAcceso] ca ON ca.UsuarioId = us.UsuarioId
 										WHERE cast(ad.Correo as varchar) = @Username AND ca.Password = HASHBYTES('SHA2_512',CAST(@PasswordEncrypted AS VARCHAR(100))));
 
-					SELECT 0 [Rsp], '+' [Token], @Username [Username], @TipoUsuario [UserType], @NombreCompleto [NombreCompleto], @RutaImagen [Imagen], '[{"NombreSeccion":"Menu Principal","Referencia": "Bienvenida.html"},{"NombreSeccion":"Alta Clases","Referencia": "AltaClases.html"},{"NombreSeccion":"Alta profesores","Referencia": "AltaProfesores.html"},{"NombreSeccion":"Alta Alumnos","Referencia": "AltaAlumnos.html"}, {"NombreSeccion":"Gestion Principal", "Referencia": "GestionPrincipal.html"}]' [Secciones];
+					SELECT 0 [Rsp], '+' [Token], @Username [Username], @TipoUsuario [UserType], @NombreCompleto [NombreCompleto], @RutaImagen [Imagen], '[{"NombreSeccion":"Menu Principal","Referencia": "Bienvenida.html"},{"NombreSeccion":"Alta Clases","Referencia": "AltaClases.html"},{"NombreSeccion":"Alta profesores","Referencia": "AltaProfesor.html"},{"NombreSeccion":"Alta Alumnos","Referencia": "AltaAlumno.html"}, {"NombreSeccion":"Gestion Principal", "Referencia": "GestionPrincipal.html"}]' [Secciones];
 				end
 				ELSE BEGIN
 					SELECT -1 [Rsp], NULL [Token], NULL [Username], NULL [UserType], NULL [NombreCompleto], NULL [Imagen], NULL [Secciones];
@@ -1353,6 +1353,31 @@ CREATE VIEW [dbo].[Vw_Main_Log]
 AS
 select MainLogId [Id], Descripcion [Accion], (us.Nombres+' '+us.Apellidos) [Usuario], CAST(ml.FechaInsercion AS DATE)[Fecha], CAST(ml.FechaInsercion AS time)[Hora] from MainLog ml
 JOIN Usuario us ON us.UsuarioId = ml.UsuarioId
+GO
+GO
+CREATE OR ALTER PROCEDURE [dbo].[Sp_GetBaseInfo](@NombreCompleto NVARCHAR(150))
+AS
+BEGIN
+	SELECT 
+	CASE 
+		WHEN al.AlumnoId IS NOT NULL THEN cast(al.AlumnoId as varchar)
+		WHEN p.ProfesorId IS NOT NULL THEN  cast(p.ProfesorId as varchar)
+		WHEN ad.AdministradoresId IS NOT NULL THEN cast(ad.AdministradoresId as varchar)
+		else ''
+	END [MasterId],
+	(us.Nombres + ' '+us.Apellidos) [Nombre],
+	cast(us.Edad as varchar) [Edad],
+	CASE 
+		WHEN al.AlumnoId IS NOT NULL THEN cast(al.AlumnoId as varchar)+'@controlescolar.com'
+		WHEN p.Correo IS NOT NULL THEN  p.Correo
+		WHEN ad.Correo IS NOT NULL THEN ad.Correo
+	END [MasterEmail]
+	FROM Usuario us 
+	LEFT JOIN Alumno al ON al.UsuarioId = us.UsuarioId
+	LEFT JOIN Profesor p ON p.UsuarioId = us.UsuarioId
+	LEFT JOIN Administradores ad ON ad.UsuarioId = us.UsuarioId
+	WHERE (US.Nombres+ ' '+us.Apellidos) = @NombreCompleto
+END
 GO
 /************************************************************************************/
 /************************************Disparadores************************************/
